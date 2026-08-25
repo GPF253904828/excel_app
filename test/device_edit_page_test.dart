@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:excel_app/device_edit_page.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -24,6 +26,34 @@ void main() {
 
     expect(savedRow, const ['P002', '设备B', '首行']);
     expect(find.byType(DeviceEditPage), findsNothing);
+  });
+
+  testWidgets('pads missing cells with empty strings when saving',
+      (tester) async {
+    List<String>? savedRow;
+    await tester.pumpWidget(
+      MaterialApp(
+        home: DeviceEditPage(
+          headers: const ['设备编号', '设备名称', '备注'],
+          initialRow: const ['P001', '设备A'],
+          isNew: true,
+          onSave: (row) async => savedRow = row,
+        ),
+      ),
+    );
+
+    expect(
+      tester
+          .widget<TextField>(find.byKey(const Key('field-备注')))
+          .controller!
+          .text,
+      isEmpty,
+    );
+
+    await tester.tap(find.text('保存'));
+    await tester.pumpAndSettle();
+
+    expect(savedRow, const ['P001', '设备A', '']);
   });
 
   testWidgets('keeps the existing device code read-only by default',
@@ -97,6 +127,55 @@ void main() {
           .controller!
           .text,
       '设备B',
+    );
+  });
+
+  testWidgets('ignores a second save while the first save is pending',
+      (tester) async {
+    final saveCompleted = Completer<void>();
+    var saveCalls = 0;
+    await tester.pumpWidget(
+      MaterialApp(
+        home: DeviceEditPage(
+          headers: const ['设备编号'],
+          initialRow: const ['P001'],
+          isNew: true,
+          onSave: (_) async {
+            saveCalls++;
+            await saveCompleted.future;
+          },
+        ),
+      ),
+    );
+
+    await tester.tap(find.text('保存'));
+    await tester.pump();
+    await tester.tap(find.text('保存'));
+    await tester.pump();
+
+    expect(saveCalls, 1);
+
+    saveCompleted.complete();
+    await tester.pumpAndSettle();
+    expect(find.byType(DeviceEditPage), findsNothing);
+  });
+
+  testWidgets('disposes field controllers when the page is removed',
+      (tester) async {
+    await tester.pumpWidget(_buildPage(isNew: true));
+    final controller = tester
+        .widget<TextField>(find.byKey(const Key('field-设备编号')))
+        .controller!;
+
+    await tester.pumpWidget(
+      const MaterialApp(home: Scaffold(body: Text('另一个页面'))),
+    );
+    await tester.pump();
+
+    expect(find.byKey(const Key('field-设备编号')), findsNothing);
+    expect(
+      () => controller.addListener(() {}),
+      throwsA(isA<AssertionError>()),
     );
   });
 }
