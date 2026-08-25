@@ -1,6 +1,8 @@
 import 'dart:io';
+import 'dart:typed_data';
 
 import 'package:excel_app/network_tools/xls_reader.dart';
+import 'package:excel_app/qr_create_page.dart';
 import 'package:excel_app/utils/toast_util.dart';
 import 'package:flutter/material.dart';
 
@@ -31,12 +33,15 @@ class SpreadsheetPage extends StatefulWidget {
   final File file;
   final XlsTable table;
   final Future<void> Function(XlsTable table) onSave;
+  final Future<void> Function(Uint8List bytes, String filename)?
+      onExportQrCodes;
 
   const SpreadsheetPage({
     super.key,
     required this.file,
     required this.table,
     required this.onSave,
+    this.onExportQrCodes,
   });
 
   @override
@@ -162,6 +167,20 @@ class _SpreadsheetPageState extends State<SpreadsheetPage> {
     }
   }
 
+  /// 打开二维码页面并传入当前编辑中的表格数据。
+  Future<void> _openQrCreatePage() async {
+    await Navigator.push<void>(
+      context,
+      MaterialPageRoute(
+        builder: (_) => QrCreatePage(
+          headers: List<String>.from(_headers),
+          rows: _rows.map(List<String>.from).toList(),
+          onExport: widget.onExportQrCodes,
+        ),
+      ),
+    );
+  }
+
   /// 构建表格工具栏和双向滚动区域。
   @override
   Widget build(BuildContext context) {
@@ -183,6 +202,11 @@ class _SpreadsheetPageState extends State<SpreadsheetPage> {
                   tooltip: '新增一行',
                   onPressed: _addRow,
                   icon: const Icon(Icons.add),
+                ),
+                IconButton(
+                  tooltip: '生成二维码',
+                  onPressed: _openQrCreatePage,
+                  icon: const Icon(Icons.qr_code),
                 ),
                 const Spacer(),
                 Text('共 ${_rows.length} 条数据'),

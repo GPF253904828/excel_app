@@ -64,6 +64,8 @@ class _HomePageState extends State<HomePage> {
             table: table,
             onSave: (editedTable) =>
                 _controller.exportEditedFile(file, editedTable),
+            onExportQrCodes: (bytes, filename) =>
+                _controller.exportQrArchive(bytes, filename),
           ),
         ),
       );

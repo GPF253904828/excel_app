@@ -2,6 +2,7 @@ import 'package:excel_app/spreadsheet_page.dart';
 import 'dart:io';
 
 import 'package:excel_app/network_tools/xls_reader.dart';
+import 'package:excel_app/qr_create_page.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -85,5 +86,30 @@ void main() {
     await tester.pump();
 
     expect(savedTable?.rows.single[2], '设备B');
+  });
+
+  testWidgets('opens QR creation page with the current table rows',
+      (tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: SpreadsheetPage(
+          file: File('device_list.xls'),
+          table: XlsTable(
+            headers: const ['设备编号', '设备名称'],
+            rows: const [
+              ['P001', '设备A'],
+            ],
+          ),
+          onSave: (_) async {},
+        ),
+      ),
+    );
+
+    await tester.tap(find.byTooltip('生成二维码'));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(QrCreatePage), findsOneWidget);
+    expect(find.text('P001'), findsOneWidget);
+    expect(find.text('设备A'), findsOneWidget);
   });
 }

@@ -39,11 +39,9 @@ class _ScannerPageState extends State<ScannerPage> {
     if (_completed) return;
     _completed = true;
 
-    // 启动等待只是退出兜底；超时后仍继续执行 stop 和返回逻辑。
-    await _startupCompleted.future.timeout(
-      const Duration(seconds: 1),
-      onTimeout: () {},
-    );
+    // 权限请求和原生初始化由用户/系统控制且不可取消；退出必须串行等待，
+    // 避免页面销毁后原生启动完成又重新启动相机。
+    await _startupCompleted.future;
     try {
       await _controller.stop();
     } catch (_) {

@@ -12,6 +12,7 @@ class FileServer {
   HttpServer? _server;
   Uint8List? _pendingExport;
   String? _pendingExportName;
+  String _pendingExportContentType = 'text/csv; charset=utf-8';
 
   /// 文件接收完成后的回调，参数为保存目录
   void Function(Directory saveDir)? onFilesReceived;
@@ -20,10 +21,15 @@ class FileServer {
       : _port = port,
         _saveDir = saveDir;
 
-  /// 排队一个等待电脑浏览器下载的文件。
-  void queueExport(Uint8List bytes, String filename) {
+  /// 排队一个等待电脑浏览器下载的文件及其 MIME 类型。
+  void queueExport(
+    Uint8List bytes,
+    String filename, {
+    String contentType = 'text/csv; charset=utf-8',
+  }) {
     _pendingExport = Uint8List.fromList(bytes);
     _pendingExportName = filename;
+    _pendingExportContentType = contentType;
   }
 
   Future<void> init() async {
@@ -132,6 +138,7 @@ setInterval(pollExport, 1000);
   Future<void> _handleExport(HttpRequest request) async {
     final bytes = _pendingExport;
     final filename = _pendingExportName;
+    final contentType = _pendingExportContentType;
     if (bytes == null || filename == null) {
       request.response.statusCode = HttpStatus.noContent;
       await request.response.close();
@@ -140,10 +147,11 @@ setInterval(pollExport, 1000);
 
     _pendingExport = null;
     _pendingExportName = null;
+    _pendingExportContentType = 'text/csv; charset=utf-8';
     request.response.statusCode = HttpStatus.ok;
     request.response.headers.set(
       'Content-Type',
-      'text/csv; charset=utf-8',
+      contentType,
     );
     request.response.headers.set(
       'Content-Disposition',

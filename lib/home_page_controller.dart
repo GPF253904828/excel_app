@@ -100,6 +100,19 @@ class HomePageController extends ChangeNotifier {
     server.queueExport(CsvExporter().export(table), filename);
   }
 
+  /// 将二维码 ZIP 排队，等待电脑端页面下载到默认目录。
+  Future<void> exportQrArchive(Uint8List bytes, String filename) async {
+    final server = _fileServer;
+    if (server == null) {
+      throw StateError('文件服务未启动');
+    }
+    server.queueExport(
+      bytes,
+      filename,
+      contentType: 'application/zip',
+    );
+  }
+
   /// 停止文件服务并更新首页状态。
   void stopServer() {
     _fileServer?.release();

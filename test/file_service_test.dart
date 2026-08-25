@@ -63,6 +63,18 @@ void main() {
     expect(emptyResponse.statusCode, HttpStatus.noContent);
     await emptyResponse.drain<void>();
 
+    server.queueExport(
+      Uint8List.fromList([0x50, 0x4B]),
+      'A.zip',
+      contentType: 'application/zip',
+    );
+    final zipRequest = await client.get('127.0.0.1', 18081, '/export');
+    final zipResponse = await zipRequest.close();
+    expect(zipResponse.statusCode, HttpStatus.ok);
+    expect(zipResponse.headers.contentType?.mimeType, 'application/zip');
+    expect(zipResponse.headers.value('content-disposition'), contains('A.zip'));
+    await zipResponse.drain<void>();
+
     server.release();
     await saveDir.delete(recursive: true);
   });

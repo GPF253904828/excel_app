@@ -33,6 +33,7 @@ dependencies:
   path_provider: ^2.1.0
   fluttertoast:
   mobile_scanner: ^3.5.7
+  archive: ^3.3.7
   qr_flutter: ^4.1.0
 
   # The following adds the Cupertino Icons font to your application.
