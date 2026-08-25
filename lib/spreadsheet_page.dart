@@ -1,8 +1,10 @@
 import 'dart:io';
 import 'dart:typed_data';
 
+import 'package:excel_app/device_edit_page.dart';
 import 'package:excel_app/network_tools/xls_reader.dart';
 import 'package:excel_app/qr_create_page.dart';
+import 'package:excel_app/scanner_page.dart';
 import 'package:excel_app/utils/toast_util.dart';
 import 'package:flutter/material.dart';
 
@@ -26,6 +28,25 @@ double spreadsheetColumnWidth(String header, Iterable<String> values) {
     width = width < painter.width ? painter.width : width;
   }
   return (width + 24).clamp(_minColumnWidth, _maxColumnWidth).toDouble();
+}
+
+/// 按设备编号精确查找行，匹配时忽略编号首尾空白。
+int findDeviceRowIndex(
+  List<String> headers,
+  List<List<String>> rows,
+  String deviceNumber,
+) {
+  final numberIndex = headers.indexOf('设备编号');
+  if (numberIndex < 0) return -1;
+
+  final target = deviceNumber.trim();
+  for (var rowIndex = 0; rowIndex < rows.length; rowIndex++) {
+    final row = rows[rowIndex];
+    if (numberIndex < row.length && row[numberIndex].trim() == target) {
+      return rowIndex;
+    }
+  }
+  return -1;
 }
 
 /// 提供 Excel 表格的新增、编辑、删除和保存操作。
@@ -60,42 +81,79 @@ class _SpreadsheetPageState extends State<SpreadsheetPage> {
     _rows = widget.table.rows.map(List<String>.from).toList();
   }
 
-  /// 在表格末尾新增一条空数据。
-  void _addRow() {
-    ToastUtil.showCenter('列表底部添加成功');
-    setState(() {
-      _rows.add(List<String>.filled(_headers.length, ''));
-    });
-  }
+  /// 打开新增行编辑页，只有保存成功后才追加到当前列表。
+  Future<void> _addRow() => _openEditor();
 
-  /// 弹出单元格编辑框并更新对应值。
-  Future<void> _editCell(int rowIndex, int columnIndex) async {
-    final value = await showDialog<String>(
-      context: context,
-      builder: (_) => _EditCellDialog(
-        title: _editCellTitle(rowIndex, columnIndex),
-        initialValue: _rows[rowIndex][columnIndex],
-      ),
-    );
-
-    if (value == null || !mounted) return;
-    setState(() {
-      _rows[rowIndex][columnIndex] = value;
-    });
-  }
-
-  /// 生成包含设备编号和设备名称的编辑提示标题。
-  String _editCellTitle(int rowIndex, int columnIndex) {
-    final contextValues = <String>[];
-    for (final label in ['设备编号', '设备名称']) {
-      final index = _headers.indexOf(label);
-      if (index < 0) continue;
-      final value = _rows[rowIndex][index].trim();
-      if (value.isNotEmpty) contextValues.add('$label $value');
+  /// 打开相机扫描设备编号，并进入匹配行的编辑页。
+  Future<void> _scanRow() async {
+    if (!_headers.contains('设备编号')) {
+      ToastUtil.showCenter('表格中没有设备编号列');
+      return;
     }
 
-    final prefix = contextValues.isEmpty ? '' : '${contextValues.join('、')}的 ';
-    return '修改$prefix${_headers[columnIndex]}信息';
+    final deviceNumber = await Navigator.push<String>(
+      context,
+      MaterialPageRoute(builder: (_) => const ScannerPage()),
+    );
+    if (deviceNumber == null || !mounted) return;
+
+    final rowIndex = findDeviceRowIndex(_headers, _rows, deviceNumber);
+    if (rowIndex < 0) {
+      ToastUtil.showCenter('未找到设备编号：${deviceNumber.trim()}');
+      return;
+    }
+    await _openEditor(rowIndex: rowIndex);
+  }
+
+  /// 打开新增或已有行编辑页，并在外部保存成功后更新列表。
+  Future<void> _openEditor({int? rowIndex}) async {
+    final initialRow = rowIndex == null
+        ? List<String>.filled(_headers.length, '')
+        : _rowForEditor(_rows[rowIndex]);
+
+    await Navigator.push<void>(
+      context,
+      MaterialPageRoute(
+        builder: (_) => DeviceEditPage(
+          headers: List<String>.from(_headers),
+          initialRow: initialRow,
+          isNew: rowIndex == null,
+          onSave: (row) => _saveRow(rowIndex, row),
+        ),
+      ),
+    );
+  }
+
+  /// 将不完整的数据行补齐为与表头等长，避免编辑页索引错位。
+  List<String> _rowForEditor(List<String> row) {
+    return List<String>.generate(
+      _headers.length,
+      (index) => index < row.length ? row[index] : '',
+    );
+  }
+
+  /// 外部保存成功后替换或追加一行，失败时保持原列表不变。
+  Future<void> _saveRow(int? rowIndex, List<String> row) async {
+    final normalizedRow = _rowForEditor(row);
+    final candidateRows = _rows.map(List<String>.from).toList();
+    if (rowIndex == null) {
+      candidateRows.add(normalizedRow);
+    } else {
+      candidateRows[rowIndex] = normalizedRow;
+    }
+
+    await widget.onSave(XlsTable(
+      headers: List<String>.from(_headers),
+      rows: candidateRows,
+    ));
+    if (!mounted) return;
+
+    setState(() {
+      _rows
+        ..clear()
+        ..addAll(candidateRows);
+    });
+    ToastUtil.showCenter('已保存，等待电脑接收');
   }
 
   /// 长按数据行后确认删除。
@@ -204,6 +262,11 @@ class _SpreadsheetPageState extends State<SpreadsheetPage> {
                   icon: const Icon(Icons.add),
                 ),
                 IconButton(
+                  tooltip: '扫描二维码',
+                  onPressed: _scanRow,
+                  icon: const Icon(Icons.qr_code_scanner),
+                ),
+                IconButton(
                   tooltip: '生成二维码',
                   onPressed: _openQrCreatePage,
                   icon: const Icon(Icons.qr_code),
@@ -260,7 +323,7 @@ class _SpreadsheetPageState extends State<SpreadsheetPage> {
                                 overflow: TextOverflow.ellipsis,
                               ),
                             ),
-                            onTap: () => _editCell(rowIndex, columnIndex),
+                            onTap: () => _openEditor(rowIndex: rowIndex),
                             onLongPress: () => _deleteRow(rowIndex),
                           );
                         }),
@@ -273,60 +336,6 @@ class _SpreadsheetPageState extends State<SpreadsheetPage> {
           ],
         ),
       ),
-    );
-  }
-}
-
-/// 管理单元格编辑输入框的生命周期，避免退出动画期间提前释放 controller。
-class _EditCellDialog extends StatefulWidget {
-  final String title;
-  final String initialValue;
-
-  const _EditCellDialog({
-    required this.title,
-    required this.initialValue,
-  });
-
-  @override
-  State<_EditCellDialog> createState() => _EditCellDialogState();
-}
-
-class _EditCellDialogState extends State<_EditCellDialog> {
-  late final TextEditingController _controller;
-
-  @override
-  void initState() {
-    super.initState();
-    _controller = TextEditingController(text: widget.initialValue);
-  }
-
-  /// 释放编辑框持有的输入控制器。
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
-
-  /// 构建单元格编辑对话框。
-  @override
-  Widget build(BuildContext context) {
-    return AlertDialog(
-      title: Text(widget.title),
-      content: TextField(
-        controller: _controller,
-        autofocus: true,
-        decoration: const InputDecoration(border: OutlineInputBorder()),
-      ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.pop(context),
-          child: const Text('取消'),
-        ),
-        ElevatedButton(
-          onPressed: () => Navigator.pop(context, _controller.text),
-          child: const Text('确定'),
-        ),
-      ],
     );
   }
 }
