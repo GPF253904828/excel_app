@@ -39,7 +39,11 @@ class _ScannerPageState extends State<ScannerPage> {
     if (_completed) return;
     _completed = true;
 
-    await _startupCompleted.future;
+    // 启动等待只是退出兜底；超时后仍继续执行 stop 和返回逻辑。
+    await _startupCompleted.future.timeout(
+      const Duration(seconds: 1),
+      onTimeout: () {},
+    );
     try {
       await _controller.stop();
     } catch (_) {
