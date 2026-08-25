@@ -122,6 +122,10 @@ void main() {
     expect(find.byType(DeviceEditPage), findsOneWidget);
     expect(find.text('保存失败: 网络错误'), findsOneWidget);
     expect(
+      tester.widget<TextField>(find.byKey(const Key('field-设备名称'))).enabled,
+      isTrue,
+    );
+    expect(
       tester
           .widget<TextField>(find.byKey(const Key('field-设备名称')))
           .controller!
@@ -154,6 +158,48 @@ void main() {
     await tester.pump();
 
     expect(saveCalls, 1);
+
+    saveCompleted.complete();
+    await tester.pumpAndSettle();
+    expect(find.byType(DeviceEditPage), findsNothing);
+  });
+
+  testWidgets('disables all editing while saving and returns after completion',
+      (tester) async {
+    final saveCompleted = Completer<void>();
+    await tester.pumpWidget(
+      MaterialApp(
+        home: DeviceEditPage(
+          headers: const ['设备编号', '设备名称'],
+          initialRow: const ['P001', '设备A'],
+          isNew: false,
+          onSave: (_) async => saveCompleted.future,
+        ),
+      ),
+    );
+
+    await tester.tap(find.text('保存'));
+    await tester.pump();
+
+    expect(
+      tester.widget<TextField>(find.byKey(const Key('field-设备名称'))).enabled,
+      isFalse,
+    );
+    expect(
+      tester.widget<TextField>(find.byKey(const Key('field-设备编号'))).enabled,
+      isFalse,
+    );
+    expect(
+      tester
+          .widget<IconButton>(
+            find.ancestor(
+              of: find.byTooltip('修改设备编码'),
+              matching: find.byType(IconButton),
+            ),
+          )
+          .onPressed,
+      isNull,
+    );
 
     saveCompleted.complete();
     await tester.pumpAndSettle();

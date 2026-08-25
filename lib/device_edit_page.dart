@@ -102,7 +102,7 @@ class _DeviceEditPageState extends State<DeviceEditPage> {
     final field = TextField(
       key: Key('field-$header'),
       controller: _controllers[index],
-      enabled: header != '设备编号' || _deviceCodeEditable,
+      enabled: !_saving && (header != '设备编号' || _deviceCodeEditable),
       decoration: InputDecoration(labelText: header),
     );
 
@@ -112,7 +112,8 @@ class _DeviceEditPageState extends State<DeviceEditPage> {
         Expanded(child: field),
         IconButton(
           tooltip: '修改设备编码',
-          onPressed: _deviceCodeEditable ? null : _confirmDeviceCodeEdit,
+          onPressed:
+              _saving || _deviceCodeEditable ? null : _confirmDeviceCodeEdit,
           icon: const Icon(Icons.edit),
         ),
       ],
