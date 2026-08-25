@@ -19,11 +19,26 @@ class ScannerPage extends StatefulWidget {
 }
 
 class _ScannerPageState extends State<ScannerPage> {
-  /// Controller 所有权由 MobileScanner 持有，并由其 State.dispose() 释放。
+  /// 页面主动退出只调用一次 stop；卸载后的 dispose/stop 由 MobileScanner
+  /// 内部负责，属于插件行为，页面无法避免也不再额外包装 controller。
   final MobileScannerController _controller = MobileScannerController(
     detectionSpeed: DetectionSpeed.noDuplicates,
   );
   bool _completed = false;
+
+  /// 停止扫描并只执行一次返回，可选地携带扫描结果。
+  Future<void> _finish([String? value]) async {
+    if (_completed) return;
+    _completed = true;
+
+    try {
+      await _controller.stop();
+    } catch (_) {
+      // 停止相机失败不应阻止页面返回。
+    }
+    if (!mounted) return;
+    Navigator.pop(context, value);
+  }
 
   /// 处理扫描事件，只接受首个有效编码并结束相机扫描。
   Future<void> _handleDetection(BarcodeCapture capture) async {
@@ -31,15 +46,7 @@ class _ScannerPageState extends State<ScannerPage> {
 
     final value = firstScanValue(capture);
     if (value == null) return;
-
-    _completed = true;
-    try {
-      await _controller.stop();
-    } catch (_) {
-      // 即使停止相机失败，也要返回已经识别出的设备编码。
-    }
-    if (!mounted) return;
-    Navigator.pop(context, value);
+    await _finish(value);
   }
 
   /// 将扫码启动错误转换为可读提示，并提供返回操作。
@@ -62,7 +69,7 @@ class _ScannerPageState extends State<ScannerPage> {
             Text(message, textAlign: TextAlign.center),
             const SizedBox(height: 16),
             ElevatedButton(
-              onPressed: _cancel,
+              onPressed: _finish,
               child: const Text('返回'),
             ),
           ],
@@ -72,37 +79,43 @@ class _ScannerPageState extends State<ScannerPage> {
   }
 
   /// 返回上一页，不带扫描结果。
-  void _cancel() {
-    _completed = true;
-    Navigator.pop(context);
+  Future<void> _cancel() => _finish();
+
+  /// 拦截系统返回，确保它与按钮和扫码成功共用同一退出流程。
+  Future<bool> _handleWillPop() async {
+    await _finish();
+    return false;
   }
 
   /// 构建相机预览和取消操作。
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('扫描设备编码'),
-      ),
-      body: Stack(
-        fit: StackFit.expand,
-        children: [
-          MobileScanner(
-            controller: _controller,
-            onDetect: _handleDetection,
-            errorBuilder: _buildScannerError,
-          ),
-          Align(
-            alignment: Alignment.bottomCenter,
-            child: SafeArea(
-              minimum: const EdgeInsets.all(16),
-              child: ElevatedButton(
-                onPressed: _cancel,
-                child: const Text('取消'),
+    return WillPopScope(
+      onWillPop: _handleWillPop,
+      child: Scaffold(
+        appBar: AppBar(
+          title: const Text('扫描设备编码'),
+        ),
+        body: Stack(
+          fit: StackFit.expand,
+          children: [
+            MobileScanner(
+              controller: _controller,
+              onDetect: _handleDetection,
+              errorBuilder: _buildScannerError,
+            ),
+            Align(
+              alignment: Alignment.bottomCenter,
+              child: SafeArea(
+                minimum: const EdgeInsets.all(16),
+                child: ElevatedButton(
+                  onPressed: _cancel,
+                  child: const Text('取消'),
+                ),
               ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
