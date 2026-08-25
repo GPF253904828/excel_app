@@ -19,20 +19,25 @@ class ScannerPage extends StatefulWidget {
 }
 
 class _ScannerPageState extends State<ScannerPage> {
+  /// Controller 所有权由 MobileScanner 持有，并由其 State.dispose() 释放。
   final MobileScannerController _controller = MobileScannerController(
     detectionSpeed: DetectionSpeed.noDuplicates,
   );
   bool _completed = false;
 
   /// 处理扫描事件，只接受首个有效编码并结束相机扫描。
-  void _handleDetection(BarcodeCapture capture) {
+  Future<void> _handleDetection(BarcodeCapture capture) async {
     if (_completed) return;
 
     final value = firstScanValue(capture);
     if (value == null) return;
 
     _completed = true;
-    _controller.stop();
+    try {
+      await _controller.stop();
+    } catch (_) {
+      // 即使停止相机失败，也要返回已经识别出的设备编码。
+    }
     if (!mounted) return;
     Navigator.pop(context, value);
   }
@@ -57,7 +62,7 @@ class _ScannerPageState extends State<ScannerPage> {
             Text(message, textAlign: TextAlign.center),
             const SizedBox(height: 16),
             ElevatedButton(
-              onPressed: () => Navigator.pop(context),
+              onPressed: _cancel,
               child: const Text('返回'),
             ),
           ],
@@ -68,14 +73,8 @@ class _ScannerPageState extends State<ScannerPage> {
 
   /// 返回上一页，不带扫描结果。
   void _cancel() {
+    _completed = true;
     Navigator.pop(context);
-  }
-
-  /// 释放扫码控制器。
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
   }
 
   /// 构建相机预览和取消操作。
