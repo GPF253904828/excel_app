@@ -2,6 +2,8 @@ import 'dart:convert';
 import 'dart:io';
 import 'dart:typed_data';
 
+import 'package:network_info_plus/network_info_plus.dart';
+
 class FileServer {
   final int _port;
   final Directory _saveDir;
@@ -318,13 +320,24 @@ class _MultipartPart {
 
 /// 获取本机局域网 IP
 Future<String?> getLocalIp() async {
-  for (final iface
-      in await NetworkInterface.list(type: InternetAddressType.IPv4)) {
-    for (final addr in iface.addresses) {
-      if (!addr.isLoopback && !addr.isLinkLocal) {
-        return addr.address;
+  try {
+    final wifiIp = await NetworkInfo().getWifiIP();
+    if (wifiIp != null && wifiIp.isNotEmpty) return wifiIp;
+  } catch (_) {
+    // 插件在部分 release 设备上不可用时，继续使用 Dart 接口枚举。
+  }
+
+  try {
+    for (final iface
+        in await NetworkInterface.list(type: InternetAddressType.IPv4)) {
+      for (final addr in iface.addresses) {
+        if (!addr.isLoopback && !addr.isLinkLocal) {
+          return addr.address;
+        }
       }
     }
+  } on SocketException {
+    // 没有网络接口时仍允许服务继续启动，页面会显示未获取到 IP。
   }
   return null;
 }
