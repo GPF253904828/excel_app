@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 
@@ -19,18 +21,25 @@ class ScannerPage extends StatefulWidget {
 }
 
 class _ScannerPageState extends State<ScannerPage> {
-  /// 页面主动退出只调用一次 stop；卸载后的 dispose/stop 由 MobileScanner
-  /// 内部负责，属于插件行为，页面无法避免也不再额外包装 controller。
+  /// 页面主动退出只请求一次 stop；卸载时 MobileScanner 仍会按插件内部实现
+  /// 调用 controller.dispose()/stop，页面无法控制这次额外调用。
   final MobileScannerController _controller = MobileScannerController(
     detectionSpeed: DetectionSpeed.noDuplicates,
   );
+  final Completer<void> _startupCompleted = Completer<void>();
   bool _completed = false;
+
+  /// 标记相机启动完成，成功和失败都只完成一次启动等待。
+  void _markStarted(MobileScannerArguments? _) {
+    if (!_startupCompleted.isCompleted) _startupCompleted.complete();
+  }
 
   /// 停止扫描并只执行一次返回，可选地携带扫描结果。
   Future<void> _finish([String? value]) async {
     if (_completed) return;
     _completed = true;
 
+    await _startupCompleted.future;
     try {
       await _controller.stop();
     } catch (_) {
@@ -55,6 +64,7 @@ class _ScannerPageState extends State<ScannerPage> {
     MobileScannerException error,
     Widget? child,
   ) {
+    _markStarted(null);
     final permissionDenied =
         error.errorCode == MobileScannerErrorCode.permissionDenied;
     final message =
@@ -102,6 +112,7 @@ class _ScannerPageState extends State<ScannerPage> {
             MobileScanner(
               controller: _controller,
               onDetect: _handleDetection,
+              onScannerStarted: _markStarted,
               errorBuilder: _buildScannerError,
             ),
             Align(

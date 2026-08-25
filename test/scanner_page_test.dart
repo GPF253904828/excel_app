@@ -215,6 +215,77 @@ void main() {
     expect(popObserver.popCount, 1);
   });
 
+  testWidgets('immediate cancel waits for scanner startup before stopping',
+      (tester) async {
+    final events = <String>[];
+    final popObserver = _PopObserver(events: events);
+    final startup = Completer<Object?>();
+    const methodChannel = MethodChannel(
+      'dev.steenbakker.mobile_scanner/scanner/method',
+    );
+    TestDefaultBinaryMessengerBinding.instance!.defaultBinaryMessenger
+        .setMockMethodCallHandler(methodChannel, (call) async {
+      if (call.method == 'state') return 1;
+      if (call.method == 'start') return startup.future;
+      if (call.method == 'stop') {
+        events.add('stop');
+        return true;
+      }
+      return true;
+    });
+    addTearDown(() {
+      if (!startup.isCompleted) {
+        startup.complete(<String, dynamic>{
+          'torchable': false,
+          'size': <String, dynamic>{'width': 1.0, 'height': 1.0},
+          'textureId': 1,
+          'numberOfCameras': 1,
+        });
+      }
+      TestDefaultBinaryMessengerBinding.instance!.defaultBinaryMessenger
+          .setMockMethodCallHandler(methodChannel, null);
+    });
+
+    await tester.pumpWidget(
+      MaterialApp(
+        navigatorObservers: [popObserver],
+        home: Builder(
+          builder: (context) {
+            return ElevatedButton(
+              onPressed: () => Navigator.push<void>(
+                context,
+                MaterialPageRoute(builder: (_) => const ScannerPage()),
+              ),
+              child: const Text('打开'),
+            );
+          },
+        ),
+      ),
+    );
+
+    await tester.tap(find.text('打开'));
+    await tester.pump(const Duration(milliseconds: 500));
+    final cancelButton = tester.widget<ElevatedButton>(
+      find.widgetWithText(ElevatedButton, '取消', skipOffstage: false),
+    );
+    cancelButton.onPressed!();
+    await tester.pump();
+
+    expect(events, isNot(contains('stop')));
+    expect(popObserver.popCount, 0);
+
+    startup.complete(<String, dynamic>{
+      'torchable': false,
+      'size': <String, dynamic>{'width': 1.0, 'height': 1.0},
+      'textureId': 1,
+      'numberOfCameras': 1,
+    });
+    await tester.pumpAndSettle();
+
+    expect(events.take(2), orderedEquals(['stop', 'pop']));
+    expect(popObserver.popCount, 1);
+  });
+
   testWidgets('permission error shows readable message and return action',
       (tester) async {
     await tester.pumpWidget(
