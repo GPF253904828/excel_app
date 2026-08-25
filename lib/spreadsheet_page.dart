@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:excel_app/network_tools/xls_reader.dart';
+import 'package:excel_app/utils/toast_util.dart';
 import 'package:flutter/material.dart';
 
 const double _minColumnWidth = 72;
@@ -56,6 +57,7 @@ class _SpreadsheetPageState extends State<SpreadsheetPage> {
 
   /// 在表格末尾新增一条空数据。
   void _addRow() {
+    ToastUtil.showCenter('列表底部添加成功');
     setState(() {
       _rows.add(List<String>.filled(_headers.length, ''));
     });
@@ -151,14 +153,10 @@ class _SpreadsheetPageState extends State<SpreadsheetPage> {
         rows: _rows.map(List<String>.from).toList(),
       ));
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('已保存，等待电脑接收')),
-      );
+      ToastUtil.showCenter('已保存，等待电脑接收');
     } catch (error) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('保存失败: $error')),
-      );
+      ToastUtil.showCenter('保存失败: $error');
     } finally {
       if (mounted) setState(() => _saving = false);
     }
@@ -186,6 +184,7 @@ class _SpreadsheetPageState extends State<SpreadsheetPage> {
                   onPressed: _addRow,
                   icon: const Icon(Icons.add),
                 ),
+                const Spacer(),
                 Text('共 ${_rows.length} 条数据'),
                 const Spacer(),
                 IconButton(

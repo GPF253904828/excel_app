@@ -2,7 +2,9 @@ import 'dart:convert';
 import 'dart:io';
 import 'dart:typed_data';
 
-import 'package:network_info_plus/network_info_plus.dart';
+import 'package:flutter/services.dart';
+
+const _networkChannel = MethodChannel('com.example.excel_app/network');
 
 class FileServer {
   final int _port;
@@ -320,24 +322,30 @@ class _MultipartPart {
 
 /// 获取本机局域网 IP
 Future<String?> getLocalIp() async {
-  try {
-    final wifiIp = await NetworkInfo().getWifiIP();
-    if (wifiIp != null && wifiIp.isNotEmpty) return wifiIp;
-  } catch (_) {
-    // 插件在部分 release 设备上不可用时，继续使用 Dart 接口枚举。
+  if (Platform.isAndroid) {
+    try {
+      final ip = await _networkChannel.invokeMethod<String>('getWifiIp');
+      if (ip != null && ip.isNotEmpty) return ip;
+    } catch (_) {
+      // Android native lookup is unavailable; do not scan all Android interfaces.
+    }
+    return null;
   }
 
   try {
-    for (final iface
-        in await NetworkInterface.list(type: InternetAddressType.IPv4)) {
+    final interfaces = await NetworkInterface.list(
+      type: InternetAddressType.IPv4,
+      includeLinkLocal: false,
+    );
+    for (final iface in interfaces) {
       for (final addr in iface.addresses) {
         if (!addr.isLoopback && !addr.isLinkLocal) {
           return addr.address;
         }
       }
     }
-  } on SocketException {
-    // 没有网络接口时仍允许服务继续启动，页面会显示未获取到 IP。
+  } catch (_) {
+    // 没有可用网络信息时仍允许服务继续启动。
   }
   return null;
 }

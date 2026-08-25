@@ -5,6 +5,7 @@ import 'package:excel_app/home_page_view.dart';
 import 'package:excel_app/network_tools/xls_reader.dart';
 import 'package:excel_app/received_files_sheet.dart';
 import 'package:excel_app/spreadsheet_page.dart';
+import 'package:excel_app/utils/toast_util.dart';
 import 'package:flutter/material.dart';
 
 /// 手机端文件接收首页，负责组合控制器、视图和页面跳转。
@@ -33,6 +34,11 @@ class _HomePageState extends State<HomePage> {
       return;
     }
 
+    if (files.length == 1) {
+      await _showSpreadsheet(files.single);
+      return;
+    }
+
     await showReceivedFilesSheet(
       context,
       files: files,
@@ -46,9 +52,7 @@ class _HomePageState extends State<HomePage> {
       final table = XlsReader().read(await file.readAsBytes());
       if (!mounted) return;
       if (table.headers.isEmpty) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Excel 文件没有可展示的数据')),
-        );
+        ToastUtil.showCenter('Excel 文件没有可展示的数据');
         return;
       }
 
@@ -65,9 +69,7 @@ class _HomePageState extends State<HomePage> {
       );
     } catch (error) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Excel 文件读取失败: $error')),
-      );
+      ToastUtil.showCenter('Excel 文件读取失败: $error');
     }
   }
 
