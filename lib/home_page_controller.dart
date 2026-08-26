@@ -136,7 +136,7 @@ class HomePageController extends ChangeNotifier {
     _notifyListeners();
   }
 
-  /// 接收服务通知后刷新“打开收到的文件”按钮。
+  /// 接收服务通知后刷新"打开收到的文件"按钮。
   void _onFilesReceived(Directory dir) {
     if (_disposed) return;
     _saveDir = dir;
@@ -144,7 +144,8 @@ class HomePageController extends ChangeNotifier {
         receivedFiles.map((file) => file.uri.pathSegments.last).toList();
     final now = DateTime.now();
     final timestamp =
-        '${now.hour.toString().padLeft(2, '0')}:${now.minute.toString().padLeft(2, '0')}';
+        '${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')} '
+        '${now.hour.toString().padLeft(2, '0')}:${now.minute.toString().padLeft(2, '0')}:${now.second.toString().padLeft(2, '0')}';
     _receivedNotice = '$timestamp 已收到 ${names.join('、')} 文件';
     refreshFiles();
   }

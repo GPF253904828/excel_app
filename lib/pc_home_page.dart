@@ -14,7 +14,7 @@ class PCHomePage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('设备管理-PC')),
+      appBar: AppBar(title: const Text('设备管理')),
       body: Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,

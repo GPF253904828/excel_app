@@ -47,7 +47,10 @@ void main() {
     final page = await utf8.decodeStream(pageResponse);
     expect(page, contains("event.preventDefault()"));
     expect(page, contains("fetch('/export'"));
-    expect(page, contains('showDirectoryPicker'));
+    expect(page, contains('手机发送的文件会自动下载'));
+    expect(page, isNot(contains('showDirectoryPicker')));
+    expect(page, contains('每次只能选择一个文件'));
+    expect(page, isNot(contains('multiple required')));
 
     server.queueExport(
         Uint8List.fromList(utf8.encode('exported')), 'edited.xls');

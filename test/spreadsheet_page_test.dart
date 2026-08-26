@@ -74,6 +74,12 @@ void main() {
 
     expect(find.byType(DeviceEditPage), findsNothing);
     expect(find.text('共 2 条数据'), findsOneWidget);
+    expect(savedTable, isNull);
+
+    await tester.tap(find.byTooltip('保存'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('保存'));
+    await tester.pumpAndSettle();
     expect(savedTable?.rows.last, ['P002', '设备B', '型号B']);
 
     await tester.longPress(find.text('设备A'));
@@ -85,7 +91,7 @@ void main() {
     expect(find.text('共 1 条数据'), findsOneWidget);
   });
 
-  testWidgets('edits a complete row and saves the changed table',
+  testWidgets('edits a complete row and uploads only from the list page',
       (tester) async {
     XlsTable? savedTable;
     await tester.pumpWidget(_spreadsheetApp(
@@ -109,11 +115,17 @@ void main() {
     await tester.tap(find.text('保存'));
     await tester.pumpAndSettle();
 
-    expect(savedTable?.rows.single, ['P001', '设备A', '型号B']);
+    expect(savedTable, isNull);
     expect(find.text('型号B'), findsOneWidget);
+
+    await tester.tap(find.byTooltip('保存'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('保存'));
+    await tester.pumpAndSettle();
+    expect(savedTable?.rows.single, ['P001', '设备A', '型号B']);
   });
 
-  testWidgets('keeps the editor open and list unchanged when save fails',
+  testWidgets('keeps the list unchanged when list upload fails',
       (tester) async {
     await tester.pumpWidget(_spreadsheetApp(
       table: XlsTable(
@@ -131,12 +143,14 @@ void main() {
     await tester.tap(find.text('保存'));
     await tester.pumpAndSettle();
 
-    expect(find.byType(DeviceEditPage), findsOneWidget);
-    expect(find.text('保存失败: 网络错误'), findsOneWidget);
-    await tester.pageBack();
+    expect(find.byType(DeviceEditPage), findsNothing);
+    expect(find.text('设备B'), findsOneWidget);
+    await tester.tap(find.byTooltip('保存'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('保存'));
     await tester.pumpAndSettle();
     expect(find.text('共 1 条数据'), findsOneWidget);
-    expect(find.text('设备A'), findsOneWidget);
+    expect(find.text('设备B'), findsOneWidget);
   });
 
   testWidgets('shows a message when a scanned device is not found',

@@ -63,36 +63,133 @@ class FileServer {
     request.response.headers.set('Content-Type', 'text/html; charset=utf-8');
     request.response.write('''
 <!DOCTYPE html>
-<html><head><meta charset="utf-8"><title>文件传输</title></head>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>设备管理</title>
+<style>
+:root {
+  color-scheme: light;
+  --primary: #126782;
+  --primary-dark: #0c4e64;
+  --ink: #17313b;
+  --muted: #65777f;
+  --line: #d9e4e8;
+  --surface: #ffffff;
+  --page: #f4f7f9;
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  min-height: 100vh;
+  background: var(--page);
+  color: var(--ink);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Microsoft YaHei", sans-serif;
+}
+.page {
+  width: min(720px, calc(100% - 32px));
+  margin: 0 auto;
+  padding: 48px 0 64px;
+}
+.brand { margin-bottom: 28px; }
+.eyebrow {
+  margin: 0 0 8px;
+  color: var(--primary);
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: .08em;
+}
+h1 { margin: 0; font-size: clamp(28px, 5vw, 42px); line-height: 1.15; }
+.subtitle { margin: 12px 0 0; color: var(--muted); font-size: 16px; }
+.panel {
+  padding: 28px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  box-shadow: 0 12px 30px rgba(23, 49, 59, .06);
+}
+.dropzone {
+  display: block;
+  padding: 32px 24px;
+  border: 1px dashed #9ab5bf;
+  border-radius: 12px;
+  background: #f8fbfc;
+  text-align: center;
+  cursor: pointer;
+  transition: border-color .2s, background .2s;
+}
+.dropzone:hover, .dropzone:focus-within { border-color: var(--primary); background: #f0f8fa; }
+.drop-icon { color: var(--primary); font-size: 32px; line-height: 1; }
+.drop-title { margin: 12px 0 6px; font-weight: 700; }
+.drop-hint { margin: 0; color: var(--muted); font-size: 14px; }
+#fileInput { position: absolute; width: 1px; height: 1px; opacity: 0; }
+#fileNames { margin: 14px 0 0; color: var(--muted); font-size: 14px; }
+.actions { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 22px; }
+button {
+  min-height: 44px;
+  padding: 0 18px;
+  border: 1px solid transparent;
+  border-radius: 10px;
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+.primary { background: var(--primary); color: #fff; }
+.primary:hover { background: var(--primary-dark); }
+.secondary { border-color: var(--line); background: #fff; color: var(--ink); }
+.secondary:hover { border-color: var(--primary); color: var(--primary); }
+#status {
+  margin: 20px 0 0;
+  padding: 12px 14px;
+  border-left: 3px solid var(--primary);
+  background: #f3f8fa;
+  color: var(--muted);
+  line-height: 1.5;
+}
+@media (max-width: 520px) {
+  .page { padding-top: 28px; }
+  .panel { padding: 20px; }
+  .actions button { width: 100%; }
+}
+</style>
+</head>
 <body>
-<h2>发送文件到手机</h2>
-<form id="uploadForm" enctype="multipart/form-data">
-  <input type="file" name="file" multiple required>
-  <button type="submit">上传</button>
-</form>
-<button id="folderButton" type="button">选择保存文件夹</button>
-<p id="status">等待操作</p>
+<main class="page">
+  <header class="brand">
+    <p class="eyebrow">设备管理 · 文件服务</p>
+    <h1>手机与电脑文件传输</h1>
+    <p class="subtitle">电脑上传表格到手机，手机发送文件到电脑时会自动下载。</p>
+  </header>
+  <section class="panel">
+    <form id="uploadForm" enctype="multipart/form-data">
+      <label class="dropzone" for="fileInput">
+        <div class="drop-icon">↥</div>
+        <div class="drop-title">选择要发送的表格文件</div>
+        <p class="drop-hint">每次只能选择一个文件</p>
+        <input id="fileInput" type="file" name="file" required>
+      </label>
+      <p id="fileNames">尚未选择文件</p>
+      <div class="actions">
+        <button class="primary" type="submit">发送到手机</button>
+      </div>
+      <p class="transfer-note">手机发送的文件会自动下载到电脑浏览器的默认下载目录，无需额外操作。</p>
+    </form>
+    <p id="status" role="status">等待操作</p>
+  </section>
+</main>
 <script>
 const form = document.getElementById('uploadForm');
 const status = document.getElementById('status');
-const folderButton = document.getElementById('folderButton');
-let exportDirectory = null;
-folderButton.addEventListener('click', async function() {
-  if (!window.showDirectoryPicker) {
-    status.textContent = '当前浏览器不支持选择文件夹，将使用默认下载目录';
-    return;
-  }
-  try {
-    exportDirectory = await window.showDirectoryPicker({mode: 'readwrite'});
-    status.textContent = '已选择保存文件夹';
-  } catch (error) {
-    status.textContent = '未选择保存文件夹';
-  }
+const fileInput = document.getElementById('fileInput');
+const fileNames = document.getElementById('fileNames');
+fileInput.addEventListener('change', function() {
+  const file = fileInput.files && fileInput.files[0];
+  fileNames.textContent = file ? file.name : '尚未选择文件';
 });
-
 form.addEventListener('submit', async function(event) {
   event.preventDefault();
-  status.textContent = '发送中...';
+  status.textContent = '文件发送中，请稍候...';
   try {
     const response = await fetch('/upload', {
       method: 'POST',
@@ -100,7 +197,7 @@ form.addEventListener('submit', async function(event) {
     });
     status.textContent = await response.text();
   } catch (error) {
-    status.textContent = '发送失败';
+    status.textContent = '发送失败，请检查手机连接。';
   }
 });
 
@@ -112,20 +209,12 @@ async function pollExport() {
     const disposition = response.headers.get('Content-Disposition') || '';
     const match = disposition.match(/filename[*]=UTF-8''([^;]+)/);
     const filename = match ? decodeURIComponent(match[1]) : 'edited.xls';
-    if (exportDirectory) {
-      const fileHandle = await exportDirectory.getFileHandle(filename, {create: true});
-      const writable = await fileHandle.createWritable();
-      await writable.write(blob);
-      await writable.close();
-      status.textContent = '已接收并保存: ' + filename;
-    } else {
-      const link = document.createElement('a');
-      link.href = URL.createObjectURL(blob);
-      link.download = filename;
-      link.click();
-      setTimeout(function() { URL.revokeObjectURL(link.href); }, 1000);
-      status.textContent = '已接收并下载: ' + filename;
-    }
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = filename;
+    link.click();
+    setTimeout(function() { URL.revokeObjectURL(link.href); }, 1000);
+    status.textContent = '已接收并下载: ' + filename;
   } catch (error) {
     // 电脑暂时无法连接时，下一轮继续检查。
   }

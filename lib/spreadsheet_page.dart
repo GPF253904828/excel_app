@@ -192,7 +192,7 @@ class _SpreadsheetPageState extends State<SpreadsheetPage> {
     await _openEditor(rowIndex: rowIndex);
   }
 
-  /// 打开新增或已有行编辑页，并在外部保存成功后更新列表。
+  /// 打开新增或已有行编辑页，编辑页保存后只更新当前列表。
   Future<void> _openEditor({int? rowIndex}) async {
     final initialRow = rowIndex == null
         ? List<String>.filled(_headers.length, '')
@@ -219,7 +219,7 @@ class _SpreadsheetPageState extends State<SpreadsheetPage> {
     );
   }
 
-  /// 外部保存成功后替换或追加一行，失败时保持原列表不变。
+  /// 将编辑结果替换或追加到当前列表，等待列表页保存按钮上传。
   Future<void> _saveRow(int? rowIndex, List<String> row) async {
     final normalizedRow = _rowForEditor(row);
     final candidateRows = _rows.map(List<String>.from).toList();
@@ -229,18 +229,12 @@ class _SpreadsheetPageState extends State<SpreadsheetPage> {
       candidateRows[rowIndex] = normalizedRow;
     }
 
-    await widget.onSave(XlsTable(
-      headers: List<String>.from(_headers),
-      rows: candidateRows,
-    ));
-    if (!mounted) return;
-
     setState(() {
       _rows
         ..clear()
         ..addAll(candidateRows);
     });
-    ToastUtil.showCenter('已保存，等待电脑接收');
+    ToastUtil.showCenter('已更新列表，点击列表页保存上传到电脑');
   }
 
   /// 长按数据行后确认删除。
