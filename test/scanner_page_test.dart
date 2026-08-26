@@ -53,9 +53,9 @@ void main() {
         home: ScannerPage(),
       ),
     );
-
     final scanner = tester.widget<MobileScanner>(find.byType(MobileScanner));
     expect(scanner.controller!.detectionSpeed, DetectionSpeed.noDuplicates);
+    expect(scanner.startDelay, isFalse);
     expect(find.text('取消'), findsOneWidget);
   });
 

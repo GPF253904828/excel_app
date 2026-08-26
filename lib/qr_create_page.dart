@@ -28,6 +28,7 @@ class _QrCreatePageState extends State<QrCreatePage> {
   late final List<QrDevice> _devices;
   late final List<bool> _selected;
   List<File>? _generatedFiles;
+  List<QrDevice>? _generatedDevices;
   String _status = '';
   bool _busy = false;
 
@@ -61,6 +62,7 @@ class _QrCreatePageState extends State<QrCreatePage> {
     setState(() {
       _selected[index] = selected;
       _generatedFiles = null;
+      _generatedDevices = null;
       _status = '请选择设备后重新生成';
     });
   }
@@ -73,6 +75,7 @@ class _QrCreatePageState extends State<QrCreatePage> {
         _selected[i] = selected;
       }
       _generatedFiles = null;
+      _generatedDevices = null;
       _status = '请选择设备后重新生成';
     });
   }
@@ -104,6 +107,7 @@ class _QrCreatePageState extends State<QrCreatePage> {
       if (!mounted) return;
       setState(() {
         _generatedFiles = files;
+        _generatedDevices = devices;
         _status = '生成已完成';
       });
     } catch (error) {
@@ -147,28 +151,89 @@ class _QrCreatePageState extends State<QrCreatePage> {
     }
   }
 
-  /// 构建设备选择列表和操作按钮。
+  /// 根据设备记录找到最近一次生成的图片文件。
+  File? _fileForDevice(QrDevice device) {
+    final files = _generatedFiles;
+    final devices = _generatedDevices;
+    if (files == null || devices == null) return null;
+    final index = devices.indexOf(device);
+    return index >= 0 && index < files.length ? files[index] : null;
+  }
+
+  /// 打开二维码大图预览，生成文件不存在时不触发无效图片加载。
+  Future<void> _preview(QrDevice device, File file) async {
+    if (!file.existsSync() || !mounted) return;
+    await showDialog<void>(
+      context: context,
+      builder: (dialogContext) => Dialog(
+        child: Padding(
+          padding: const EdgeInsets.all(12),
+          child: InteractiveViewer(
+            minScale: .8,
+            maxScale: 4,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Image.file(file, fit: BoxFit.contain),
+                const SizedBox(height: 8),
+                Text(
+                  '${device.deviceNumber}  ·  ${device.deviceName}',
+                  textAlign: TextAlign.center,
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// 构建二维码缩略图；只有生成成功且文件存在时才显示图片。
+  Widget _thumbnail(File file) {
+    return Container(
+      width: 54,
+      height: 54,
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.surfaceVariant,
+        borderRadius: BorderRadius.circular(10),
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: Image.file(file, fit: BoxFit.cover),
+    );
+  }
+
+  /// 构建设备选择列表、缩略图和生成/导出操作按钮。
   @override
   Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
     return Scaffold(
       appBar: AppBar(title: const Text('生成二维码')),
       body: SafeArea(
         child: Column(
           children: [
-            Row(
-              children: [
-                Checkbox(
-                  key: const Key('select-all-checkbox'),
-                  value: _selectAllValue,
-                  tristate: true,
-                  onChanged: _busy || _devices.isEmpty
-                      ? null
-                      : (_) => _changeAll(_selectAllValue != true),
-                ),
-                const Text('全选'),
-                const SizedBox(width: 16),
-                Text('已选择 ${_selectedDevices.length}/${_devices.length}'),
-              ],
+            Container(
+              margin: const EdgeInsets.fromLTRB(16, 8, 16, 4),
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              decoration: BoxDecoration(
+                color: colors.surface,
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(color: colors.outlineVariant),
+              ),
+              child: Row(
+                children: [
+                  Checkbox(
+                    key: const Key('select-all-checkbox'),
+                    value: _selectAllValue,
+                    tristate: true,
+                    onChanged: _busy || _devices.isEmpty
+                        ? null
+                        : (_) => _changeAll(_selectAllValue != true),
+                  ),
+                  const Text('全选'),
+                  const SizedBox(width: 16),
+                  Text('已选择 ${_selectedDevices.length}/${_devices.length}'),
+                ],
+              ),
             ),
             Expanded(
               child: _devices.isEmpty
@@ -181,19 +246,43 @@ class _QrCreatePageState extends State<QrCreatePage> {
                       itemCount: _devices.length,
                       itemBuilder: (context, index) {
                         final device = _devices[index];
-                        return ListTile(
-                          leading: Checkbox(
-                            key: Key('device-checkbox-$index'),
-                            value: _selected[index],
-                            onChanged: _busy
-                                ? null
-                                : (value) => _changeSelection(
-                                      index,
-                                      value ?? false,
-                                    ),
+                        final file = _fileForDevice(device);
+                        return Card(
+                          margin: const EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 4,
                           ),
-                          title: Text(device.deviceNumber),
-                          subtitle: Text(device.deviceName),
+                          child: ListTile(
+                            leading: Checkbox(
+                              key: Key('device-checkbox-$index'),
+                              value: _selected[index],
+                              onChanged: _busy
+                                  ? null
+                                  : (value) => _changeSelection(
+                                        index,
+                                        value ?? false,
+                                      ),
+                            ),
+                            title: Text(device.deviceNumber),
+                            subtitle: Text(device.deviceName),
+                            trailing: file == null || !file.existsSync()
+                                ? null
+                                : Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      _thumbnail(file),
+                                      const SizedBox(width: 8),
+                                      Icon(
+                                        Icons.open_in_full,
+                                        size: 18,
+                                        color: colors.onSurfaceVariant,
+                                      ),
+                                    ],
+                                  ),
+                            onTap: file == null
+                                ? null
+                                : () => _preview(device, file),
+                          ),
                         );
                       },
                     ),
@@ -201,20 +290,28 @@ class _QrCreatePageState extends State<QrCreatePage> {
             if (_status.isNotEmpty)
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 16),
-                child: Text(_status),
+                child: Text(
+                  _status,
+                  style: TextStyle(
+                    color: _status.startsWith('失败')
+                        ? colors.error
+                        : colors.onSurfaceVariant,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
               ),
             Padding(
               padding: const EdgeInsets.all(16),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.end,
                 children: [
-                  ElevatedButton.icon(
+                  FilledButton.icon(
                     onPressed: _busy ? null : _generate,
                     icon: const Icon(Icons.qr_code),
                     label: const Text('生成'),
                   ),
                   const SizedBox(width: 12),
-                  ElevatedButton.icon(
+                  OutlinedButton.icon(
                     onPressed:
                         _busy || _generatedFiles == null ? null : _export,
                     icon: const Icon(Icons.archive),

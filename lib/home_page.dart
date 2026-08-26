@@ -23,7 +23,60 @@ class _HomePageState extends State<HomePage> {
   void initState() {
     super.initState();
     _controller = HomePageController();
+    _controller.onConfirmReplace = _confirmReplace;
     _controller.initialize();
+  }
+
+  /// 新文件到达且本地已有文件时，确认是否替换旧文件。
+  Future<bool> _confirmReplace(List<String> filenames) async {
+    if (!mounted) return false;
+    final result = await showDialog<bool>(
+      context: context,
+      barrierDismissible: false,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('收到新文件'),
+        content: Text(
+          '已收到 ${filenames.join('、')} 文件，是否要替换本地已经存在的文件？',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, false),
+            child: const Text('保留本地文件'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(dialogContext, true),
+            child: const Text('确认替换'),
+          ),
+        ],
+      ),
+    );
+    return result == true;
+  }
+
+  /// 二次确认后删除手机本地保存的接收文件。
+  Future<void> _deleteReceivedFiles() async {
+    if (!mounted) return;
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('删除本地文件'),
+        content: const Text('确定删除手机本地保存的所有表格文件吗？此操作不可恢复。'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, false),
+            child: const Text('取消'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(dialogContext, true),
+            style: FilledButton.styleFrom(
+              backgroundColor: Theme.of(context).colorScheme.error,
+            ),
+            child: const Text('删除'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed == true) await _controller.deleteReceivedFiles();
   }
 
   /// 打开已接收文件列表。
@@ -94,6 +147,8 @@ class _HomePageState extends State<HomePage> {
           port: _controller.port,
           isRunning: _controller.isRunning,
           hasFiles: _controller.hasFiles,
+          receivedNotice: _controller.receivedNotice,
+          onDeleteFiles: _deleteReceivedFiles,
           onStart: () => _controller.startServer(),
           onStop: _controller.stopServer,
           onOpenFiles: _onImport,

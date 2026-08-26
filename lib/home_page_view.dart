@@ -7,6 +7,8 @@ class HomePageView extends StatelessWidget {
   final int port;
   final bool isRunning;
   final bool hasFiles;
+  final String? receivedNotice;
+  final VoidCallback? onDeleteFiles;
   final VoidCallback onStart;
   final VoidCallback onStop;
   final VoidCallback onOpenFiles;
@@ -21,31 +23,55 @@ class HomePageView extends StatelessWidget {
     required this.onStart,
     required this.onStop,
     required this.onOpenFiles,
+    this.receivedNotice,
+    this.onDeleteFiles,
   });
 
   /// 构建首页布局和文件服务操作按钮。
   @override
   Widget build(BuildContext context) {
     final address = 'http://$localIp:$port';
+    final colors = Theme.of(context).colorScheme;
+    final textTheme = Theme.of(context).textTheme;
 
     return Scaffold(
-      appBar: AppBar(title: const Text('文件接收器')),
+      appBar: AppBar(title: const Text('设备管理器')),
       body: Padding(
         padding: const EdgeInsets.all(24),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
-            Text('状态: $status', style: const TextStyle(fontSize: 18)),
+            Text(
+              '状态: $status',
+              style: textTheme.titleMedium?.copyWith(
+                color: colors.onSurface,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
             const SizedBox(height: 16),
             if (localIp != null) ...[
-              const Text('局域网地址:',
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+              Text(
+                '局域网地址:',
+                style: textTheme.titleSmall?.copyWith(
+                  color: colors.onSurface,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
               const SizedBox(height: 8),
-              SelectableText(address,
-                  style: const TextStyle(fontSize: 20, color: Colors.blue)),
+              SelectableText(
+                address,
+                style: textTheme.titleLarge?.copyWith(
+                  color: colors.primary,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
               const SizedBox(height: 8),
-              const Text('在电脑浏览器中打开上面的地址即可上传文件',
-                  style: TextStyle(color: Colors.grey)),
+              Text(
+                '在电脑浏览器中打开上面的地址即可上传文件',
+                style: textTheme.bodyMedium?.copyWith(
+                  color: colors.onSurfaceVariant,
+                ),
+              ),
             ] else
               const Text('未获取到局域网 IP，请检查网络连接'),
             Row(
@@ -53,17 +79,25 @@ class HomePageView extends StatelessWidget {
               children: [
                 ElevatedButton(
                   onPressed: isRunning ? null : onStart,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: colors.primary,
+                    foregroundColor: colors.onPrimary,
+                  ),
                   child: const Text('启动服务'),
                 ),
                 const SizedBox(width: 16),
                 ElevatedButton(
                   onPressed: isRunning ? onStop : null,
-                  style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+                  style: ElevatedButton.styleFrom(
+                    foregroundColor: colors.onSurface,
+                    side: BorderSide(color: colors.outline),
+                    backgroundColor: colors.surface,
+                  ),
                   child: const Text('停止服务'),
                 ),
               ],
             ),
-            const Spacer(),
+            const SizedBox(height: 100),
             SizedBox(
               width: 200,
               height: 60,
@@ -72,11 +106,37 @@ class HomePageView extends StatelessWidget {
                 icon: const Icon(Icons.file_download),
                 label: const Text('打开收到的文件'),
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: hasFiles ? Colors.green : null,
-                  foregroundColor: hasFiles ? Colors.white : null,
+                  backgroundColor: hasFiles ? colors.primary : null,
+                  foregroundColor: hasFiles ? colors.onPrimary : null,
                 ),
               ),
             ),
+            const SizedBox(height: 20),
+            SizedBox(
+              width: 200,
+              height: 48,
+              child: OutlinedButton.icon(
+                onPressed: hasFiles ? onDeleteFiles : null,
+                icon: const Icon(Icons.delete_outline),
+                label: const Text('删除本地文件'),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: colors.onSurfaceVariant,
+                  side: BorderSide(color: colors.outline),
+                ),
+              ),
+            ),
+            if (receivedNotice != null) ...[
+              const SizedBox(height: 12),
+              Text(
+                receivedNotice!,
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  color: colors.primary,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ],
+            const SizedBox(height: 140),
             const Spacer(),
           ],
         ),

@@ -103,19 +103,38 @@ class _DeviceEditPageState extends State<DeviceEditPage> {
       key: Key('field-$header'),
       controller: _controllers[index],
       enabled: !_saving && (header != '设备编号' || _deviceCodeEditable),
-      decoration: InputDecoration(labelText: header),
+      decoration: const InputDecoration(
+        isDense: true,
+        hintText: '请输入内容',
+      ),
     );
 
-    if (header != '设备编号' || widget.isNew) return field;
+    final content = header != '设备编号' || widget.isNew
+        ? field
+        : Row(
+            children: [
+              Expanded(child: field),
+              IconButton(
+                tooltip: '修改设备编码',
+                onPressed: _saving || _deviceCodeEditable
+                    ? null
+                    : _confirmDeviceCodeEdit,
+                icon: const Icon(Icons.edit_outlined),
+              ),
+            ],
+          );
+
     return Row(
+      crossAxisAlignment: CrossAxisAlignment.center,
       children: [
-        Expanded(child: field),
-        IconButton(
-          tooltip: '修改设备编码',
-          onPressed:
-              _saving || _deviceCodeEditable ? null : _confirmDeviceCodeEdit,
-          icon: const Icon(Icons.edit),
+        SizedBox(
+          width: 92,
+          child: Text(
+            '$header：',
+            style: const TextStyle(fontWeight: FontWeight.w700),
+          ),
         ),
+        Expanded(child: content),
       ],
     );
   }
@@ -127,7 +146,7 @@ class _DeviceEditPageState extends State<DeviceEditPage> {
       appBar: AppBar(title: const Text('编辑设备')),
       body: SafeArea(
         child: ListView(
-          padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
           children: [
             for (var index = 0; index < widget.headers.length; index++)
               Padding(
@@ -139,9 +158,10 @@ class _DeviceEditPageState extends State<DeviceEditPage> {
                 padding: const EdgeInsets.only(bottom: 12),
                 child: Text(_errorMessage!),
               ),
-            ElevatedButton(
+            FilledButton.icon(
               onPressed: _saving ? null : _save,
-              child: const Text('保存'),
+              icon: const Icon(Icons.save_outlined),
+              label: const Text('保存'),
             ),
           ],
         ),

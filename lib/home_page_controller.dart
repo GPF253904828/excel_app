@@ -13,8 +13,12 @@ class HomePageController extends ChangeNotifier {
   Directory? _saveDir;
   String? _localIp;
   String _status = '未启动';
+  String? _receivedNotice;
   bool _hasFiles = false;
   bool _disposed = false;
+
+  /// 接收新文件且本地已有文件时，由页面提供替换确认弹窗。
+  Future<bool> Function(List<String> filenames)? onConfirmReplace;
 
   HomePageController({this.port = 8080});
 
@@ -22,6 +26,7 @@ class HomePageController extends ChangeNotifier {
   String get status => _status;
   bool get isRunning => _fileServer != null;
   bool get hasFiles => _hasFiles;
+  String? get receivedNotice => _receivedNotice;
 
   /// 返回当前保存目录中可以展示的文件。
   List<File> get receivedFiles {
@@ -56,6 +61,15 @@ class HomePageController extends ChangeNotifier {
     _notifyListeners();
   }
 
+  /// 删除本地接收目录中的所有文件，并刷新首页状态。
+  Future<void> deleteReceivedFiles() async {
+    for (final file in receivedFiles) {
+      await file.delete();
+    }
+    _receivedNotice = null;
+    refreshFiles();
+  }
+
   /// 启动文件服务。
   Future<void> startServer() async {
     if (_fileServer != null || _saveDir == null || _disposed) return;
@@ -66,6 +80,7 @@ class HomePageController extends ChangeNotifier {
 
       final server = FileServer(port: port, saveDir: _saveDir!);
       server.onFilesReceived = _onFilesReceived;
+      server.onReplaceExistingFiles = onConfirmReplace;
       _fileServer = server;
       _status = '运行中';
       _notifyListeners();
@@ -125,6 +140,12 @@ class HomePageController extends ChangeNotifier {
   void _onFilesReceived(Directory dir) {
     if (_disposed) return;
     _saveDir = dir;
+    final names =
+        receivedFiles.map((file) => file.uri.pathSegments.last).toList();
+    final now = DateTime.now();
+    final timestamp =
+        '${now.hour.toString().padLeft(2, '0')}:${now.minute.toString().padLeft(2, '0')}';
+    _receivedNotice = '$timestamp 已收到 ${names.join('、')} 文件';
     refreshFiles();
   }
 

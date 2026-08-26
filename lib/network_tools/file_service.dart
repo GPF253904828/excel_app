@@ -17,6 +17,9 @@ class FileServer {
   /// 文件接收完成后的回调，参数为保存目录
   void Function(Directory saveDir)? onFilesReceived;
 
+  /// 当保存目录已有文件时，询问是否允许用本次上传文件替换旧文件。
+  Future<bool> Function(List<String> filenames)? onReplaceExistingFiles;
+
   FileServer({int port = 8080, required Directory saveDir})
       : _port = port,
         _saveDir = saveDir;
@@ -179,15 +182,38 @@ setInterval(pollExport, 1000);
       return;
     }
 
-    final savedFiles = <String>[];
-
     try {
-      // ✅ 目标2：上传新文件前，先清空旧文件
-      await _clearOldFiles();
-
       final bodyBytes = await _collectBytes(request);
       final parts = _parseMultipart(bodyBytes, boundary);
+      final filenames = [
+        for (final part in parts)
+          if (part.filename != null && part.filename!.isNotEmpty)
+            part.filename!,
+      ];
+      if (filenames.isEmpty) {
+        request.response.statusCode = HttpStatus.badRequest;
+        request.response.write('没有收到文件');
+        await request.response.close();
+        return;
+      }
 
+      final hasExistingFiles = _saveDir.existsSync() &&
+          _saveDir.listSync().any(
+                (entity) => entity is File && !entity.path.endsWith('.tmp'),
+              );
+      if (hasExistingFiles) {
+        final shouldReplace =
+            await onReplaceExistingFiles?.call(filenames) ?? true;
+        if (!shouldReplace) {
+          request.response.statusCode = HttpStatus.conflict;
+          request.response.write('已取消替换本地文件');
+          await request.response.close();
+          return;
+        }
+        await _clearOldFiles();
+      }
+
+      final savedFiles = <String>[];
       for (final part in parts) {
         if (part.filename != null && part.filename!.isNotEmpty) {
           final file = File('${_saveDir.path}/${part.filename}');
