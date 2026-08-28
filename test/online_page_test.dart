@@ -1,11 +1,34 @@
 import 'package:excel_app/online/online_page.dart';
+import 'package:excel_app/online/online_config_page.dart';
+import 'package:excel_app/online/online_config_store.dart';
 import 'package:excel_app/device_edit_page.dart';
 import 'package:excel_app/utils/net_util.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 /// 验证在线设备页面的固定字段展示入口已经存在。
 void main() {
+  setUp(() {
+    SharedPreferences.setMockInitialValues({});
+  });
+  _registerConfigTests();
+
+  testWidgets('读取配置后仅显示 URL 对应的文件名', (tester) async {
+    SharedPreferences.setMockInitialValues(<String, Object>{
+      'online_api_url': 'https://example.com/scripts/device_sync_task',
+      'online_api_token': 'token-123',
+    });
+
+    await _pumpWidget(tester, _app());
+    await tester.pumpAndSettle();
+
+    expect(find.text('当前文件: device_sync_task'), findsOneWidget);
+    expect(find.text('https://example.com/scripts/device_sync_task'),
+        findsNothing);
+    expect(find.widgetWithText(Text, 'token-123'), findsNothing);
+  });
+
   testWidgets('拖动在线页面时隐藏键盘', (tester) async {
     await _pumpWidget(tester, _app());
 
@@ -47,7 +70,7 @@ void main() {
     await tester.tap(find.byKey(const Key('online-query')));
     await tester.pumpAndSettle();
 
-    expect(find.byKey(const Key('online-column-归属部门')), findsOneWidget);
+    expect(find.byKey(const Key('online-column-部门')), findsOneWidget);
     expect(find.byKey(const Key('online-column-计量有效期至')), findsOneWidget);
     expect(find.byKey(const Key('online-value-设备编号')), findsOneWidget);
     expect(find.text('设备名称-P001'), findsOneWidget);
@@ -73,7 +96,7 @@ void main() {
     expect(find.text('未找到设备编号: P999'), findsOneWidget);
   });
 
-  testWidgets('兼容脚本实际字段并完整传入编辑器', (tester) async {
+  testWidgets('使用脚本真实字段并完整传入编辑器', (tester) async {
     await _pumpWidget(
       tester,
       _app(
@@ -88,14 +111,14 @@ void main() {
     await _queryDevice(tester, 'P001');
     expect(
       find.descendant(
-        of: find.byKey(const Key('online-value-归属部门')),
+        of: find.byKey(const Key('online-value-部门')),
         matching: find.text('质量管理部'),
       ),
       findsOneWidget,
     );
     expect(
       find.descendant(
-        of: find.byKey(const Key('online-value-设备状态')),
+        of: find.byKey(const Key('online-value-状态')),
         matching: find.text('正常使用'),
       ),
       findsOneWidget,
@@ -106,21 +129,21 @@ void main() {
     await tester.pumpAndSettle();
     expect(
       tester
-          .widget<TextField>(find.byKey(const Key('field-归属部门')))
+          .widget<TextField>(find.byKey(const Key('field-部门')))
           .controller!
           .text,
       '质量管理部',
     );
     expect(
       tester
-          .widget<TextField>(find.byKey(const Key('field-设备负责人')))
+          .widget<TextField>(find.byKey(const Key('field-仪器设备负责人')))
           .controller!
           .text,
       '韩爽',
     );
   });
 
-  testWidgets('修改时把固定字段映射回脚本实际列名', (tester) async {
+  testWidgets('修改时直接使用脚本真实列名', (tester) async {
     Map<String, dynamic>? modifiedData;
     await _pumpWidget(
       tester,
@@ -324,6 +347,35 @@ void main() {
 
     expect(find.byType(DeviceEditPage), findsOneWidget);
     expect(find.textContaining('保存失败'), findsOneWidget);
+  });
+}
+
+/// 验证在线接口配置可以保存并显示 URL 对应的文件名。
+void _registerConfigTests() {
+  testWidgets('保存接口配置后显示 URL 文件名并可再次读取', (tester) async {
+    await tester.pumpWidget(const MaterialApp(home: OnlineConfigPage()));
+
+    await tester.enterText(
+      find.byKey(const Key('online-config-url')),
+      'https://example.com/scripts/device_sync_task',
+    );
+    await tester.enterText(
+      find.byKey(const Key('online-config-token')),
+      'token-123',
+    );
+    await tester.tap(find.byKey(const Key('online-config-save')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('当前文件: device_sync_task'), findsOneWidget);
+    expect(
+      tester
+          .widget<TextField>(find.byKey(const Key('online-config-token')))
+          .obscureText,
+      isTrue,
+    );
+    final savedConfig = await const OnlineConfigStore().load();
+    expect(savedConfig?.url, 'https://example.com/scripts/device_sync_task');
+    expect(savedConfig?.token, 'token-123');
   });
 }
 

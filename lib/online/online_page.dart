@@ -1,12 +1,14 @@
 import 'package:excel_app/device_edit_page.dart';
+import 'package:excel_app/online/online_config_page.dart';
+import 'package:excel_app/online/online_config_store.dart';
 import 'package:excel_app/utils/net_util.dart';
 import 'package:flutter/material.dart';
 
 /// 在线设备表格固定展示的字段顺序。
 const List<String> onlineDeviceHeaders = <String>[
-  '归属部门',
+  '部门',
   '来源',
-  '设备状态',
+  '状态',
   '设备编号',
   '设备名称',
   '设备型号',
@@ -15,26 +17,11 @@ const List<String> onlineDeviceHeaders = <String>[
   '所在区域',
   '所在房间',
   '设备分类',
-  '设备负责人',
+  '仪器设备负责人',
   '计量机构',
   '证书类型',
   '计量有效期至',
 ];
-
-/// 页面字段到 WPS 脚本表头的兼容名称。
-const Map<String, List<String>> _onlineDeviceFieldAliases =
-    <String, List<String>>{
-  '归属部门': <String>['归属部门', '部门'],
-  '设备状态': <String>['设备状态', '状态'],
-  '设备负责人': <String>['设备负责人', '仪器设备负责人'],
-};
-
-/// 新增请求默认使用脚本当前表格中的实际表头名称。
-const Map<String, String> _defaultOnlineApiKeys = <String, String>{
-  '归属部门': '部门',
-  '设备状态': '状态',
-  '设备负责人': '仪器设备负责人',
-};
 
 /// 定义在线设备查询接口的可替换回调。
 typedef DeviceQueryCallback = Future<DeviceResult> Function(String deviceNo);
@@ -59,6 +46,7 @@ class OnlinePage extends StatefulWidget {
   final DeviceModifyCallback? onModify;
   final DeviceAddCallback? onAdd;
   final DeviceDeleteCallback? onDelete;
+  final OnlineConfigStore configStore;
 
   /// Creates an online device page with optional API callbacks for testing.
   const OnlinePage({
@@ -67,6 +55,7 @@ class OnlinePage extends StatefulWidget {
     this.onModify,
     this.onAdd,
     this.onDelete,
+    this.configStore = const OnlineConfigStore(),
   });
 
   /// Creates the mutable state for this online device page.
@@ -78,10 +67,16 @@ class _OnlinePageState extends State<OnlinePage> {
   final TextEditingController _controller = TextEditingController();
   bool _loading = false;
   Map<String, String>? _data;
-  Map<String, String> _apiKeys = <String, String>{};
+  OnlineApiConfig? _apiConfig;
   String? _deviceNo;
   String? _error;
   String? _notice;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadConfig();
+  }
 
   /// Releases the device number input controller.
   @override
@@ -90,28 +85,77 @@ class _OnlinePageState extends State<OnlinePage> {
     super.dispose();
   }
 
+  /// 读取上次保存的接口配置并刷新当前文件名称。
+  Future<void> _loadConfig() async {
+    final config = await widget.configStore.load();
+    if (mounted) setState(() => _apiConfig = config);
+  }
+
+  /// 打开接口配置页，并在保存后更新当前连接配置。
+  Future<void> _openConfig() async {
+    final config = await Navigator.push<OnlineApiConfig>(
+      context,
+      MaterialPageRoute(
+        builder: (_) => OnlineConfigPage(store: widget.configStore),
+      ),
+    );
+    if (mounted && config != null) setState(() => _apiConfig = config);
+  }
+
+  /// 返回已保存的接口配置，未配置时终止当前操作。
+  Future<OnlineApiConfig> _requireConfig() async {
+    final config = _apiConfig ?? await widget.configStore.load();
+    if (config == null) throw DeviceApiException('请先配置接口 URL 和 Token');
+    if (mounted && _apiConfig == null) setState(() => _apiConfig = config);
+    return config;
+  }
+
   /// Calls the injected query callback or the production API implementation.
-  Future<DeviceResult> _queryApi(String deviceNo) {
-    return widget.onQuery?.call(deviceNo) ?? DeviceApi.queryDevice(deviceNo);
+  Future<DeviceResult> _queryApi(String deviceNo) async {
+    if (widget.onQuery != null) return widget.onQuery!(deviceNo);
+    final config = await _requireConfig();
+    return DeviceApi.queryDevice(
+      deviceNo,
+      webhook: config.url,
+      token: config.token,
+    );
   }
 
   /// Calls the injected modify callback or the production API implementation.
   Future<DeviceResult> _modifyApi(
     String deviceNo,
     Map<String, dynamic> data,
-  ) {
-    return widget.onModify?.call(deviceNo, data) ??
-        DeviceApi.modifyDevice(deviceNo, data);
+  ) async {
+    if (widget.onModify != null) return widget.onModify!(deviceNo, data);
+    final config = await _requireConfig();
+    return DeviceApi.modifyDevice(
+      deviceNo,
+      data,
+      webhook: config.url,
+      token: config.token,
+    );
   }
 
   /// Calls the injected add callback or the production API implementation.
-  Future<DeviceResult> _addApi(Map<String, dynamic> data) {
-    return widget.onAdd?.call(data) ?? DeviceApi.addDevice(data);
+  Future<DeviceResult> _addApi(Map<String, dynamic> data) async {
+    if (widget.onAdd != null) return widget.onAdd!(data);
+    final config = await _requireConfig();
+    return DeviceApi.addDevice(
+      data,
+      webhook: config.url,
+      token: config.token,
+    );
   }
 
   /// Calls the injected delete callback or the production API implementation.
-  Future<DeviceResult> _deleteApi(String deviceNo) {
-    return widget.onDelete?.call(deviceNo) ?? DeviceApi.deleteDevice(deviceNo);
+  Future<DeviceResult> _deleteApi(String deviceNo) async {
+    if (widget.onDelete != null) return widget.onDelete!(deviceNo);
+    final config = await _requireConfig();
+    return DeviceApi.deleteDevice(
+      deviceNo,
+      webhook: config.url,
+      token: config.token,
+    );
   }
 
   /// Converts a failed business result into the exception used by the editor.
@@ -121,44 +165,26 @@ class _OnlinePageState extends State<OnlinePage> {
     }
   }
 
-  /// Normalizes API data to the fixed online table columns.
+  /// 使用脚本真实表头整理接口数据到页面表格。
   Map<String, String> _normalizeData(
     Map<String, dynamic>? data, {
     Map<String, dynamic>? fallback,
   }) {
     final source = data ?? fallback ?? <String, dynamic>{};
-    final resolvedKeys = <String, String>{};
     final normalized = <String, String>{};
     for (final header in onlineDeviceHeaders) {
-      final key = _findApiKey(header, data ?? <String, dynamic>{}) ??
-          _apiKeys[header] ??
-          _defaultOnlineApiKeys[header] ??
-          header;
-      resolvedKeys[header] = key;
-      normalized[header] = source.containsKey(key)
-          ? (source[key] ?? '').toString()
+      normalized[header] = source.containsKey(header)
+          ? (source[header] ?? '').toString()
           : (fallback?[header] ?? '').toString();
     }
-    if (data != null && data.isNotEmpty) _apiKeys = resolvedKeys;
     return normalized;
   }
 
-  /// Finds the first compatible script key present in an API response.
-  String? _findApiKey(String header, Map<String, dynamic> source) {
-    final aliases = _onlineDeviceFieldAliases[header] ?? <String>[header];
-    for (final alias in aliases) {
-      if (source.containsKey(alias)) return alias;
-    }
-    return source.containsKey(header) ? header : null;
-  }
-
-  /// Converts one edited row into the column-to-value payload expected by the script.
+  /// 将编辑行直接转换为脚本真实表头的字段载荷。
   Map<String, dynamic> _rowToData(List<String> row) {
     return <String, dynamic>{
       for (var index = 0; index < onlineDeviceHeaders.length; index++)
-        _apiKeys[onlineDeviceHeaders[index]] ??
-            _defaultOnlineApiKeys[onlineDeviceHeaders[index]] ??
-            onlineDeviceHeaders[index]: index < row.length ? row[index] : '',
+        onlineDeviceHeaders[index]: index < row.length ? row[index] : '',
     };
   }
 
@@ -409,6 +435,14 @@ class _OnlinePageState extends State<OnlinePage> {
             onTap: _dismissKeyboard,
             child: const Text('设备查询'),
           ),
+          actions: [
+            IconButton(
+              key: const Key('online-config'),
+              onPressed: _openConfig,
+              icon: const Icon(Icons.settings_outlined),
+              tooltip: '接口配置',
+            ),
+          ],
         ),
         body: SafeArea(
           child: SingleChildScrollView(
@@ -417,6 +451,12 @@ class _OnlinePageState extends State<OnlinePage> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
+                Text(
+                  '当前文件: ${_apiConfig?.fileName ?? '未配置'}',
+                  key: const Key('online-current-file'),
+                  style: Theme.of(context).textTheme.bodyMedium,
+                ),
+                const SizedBox(height: 12),
                 Row(
                   children: [
                     Expanded(
