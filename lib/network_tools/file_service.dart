@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:io';
 import 'dart:typed_data';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 
 const _networkChannel = MethodChannel('com.example.excel_app/network');
@@ -40,7 +41,7 @@ class FileServer {
 
     final server = await HttpServer.bind(InternetAddress.anyIPv4, _port);
     _server = server;
-    print('文件服务已启动: http://${await getLocalIp()}:$_port');
+    debugPrint('文件服务已启动: http://${await getLocalIp()}:$_port');
 
     await for (final HttpRequest request in server) {
       if (request.method == 'GET') {
