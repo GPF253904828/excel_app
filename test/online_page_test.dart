@@ -14,7 +14,7 @@ void main() {
   });
   _registerConfigTests();
 
-  testWidgets('读取配置后仅显示 URL 对应的文件名', (tester) async {
+  testWidgets('读取配置后显示完整 URL', (tester) async {
     SharedPreferences.setMockInitialValues(<String, Object>{
       'online_api_url': 'https://example.com/scripts/device_sync_task',
       'online_api_token': 'token-123',
@@ -23,35 +23,43 @@ void main() {
     await _pumpWidget(tester, _app());
     await tester.pumpAndSettle();
 
-    expect(find.text('当前文件: device_sync_task'), findsOneWidget);
-    expect(find.text('https://example.com/scripts/device_sync_task'),
-        findsNothing);
+    expect(
+      find.text('当前 URL: https://example.com/scripts/device_sync_task'),
+      findsOneWidget,
+    );
     expect(find.widgetWithText(Text, 'token-123'), findsNothing);
   });
 
-  testWidgets('拖动在线页面时隐藏键盘', (tester) async {
+  testWidgets('仅提供扫码入口，不提供设备编号输入框', (tester) async {
     await _pumpWidget(tester, _app());
 
-    final scrollView = tester.widget<SingleChildScrollView>(
-      find.byType(SingleChildScrollView),
-    );
-    expect(
-      scrollView.keyboardDismissBehavior,
-      ScrollViewKeyboardDismissBehavior.onDrag,
-    );
+    expect(find.byKey(const Key('online-scan')), findsOneWidget);
+    expect(find.byKey(const Key('online-device-no')), findsNothing);
+    expect(find.byKey(const Key('online-query')), findsNothing);
   });
 
-  testWidgets('点击在线页面非输入框时隐藏键盘', (tester) async {
-    await _pumpWidget(tester, _app());
-    final input = find.byKey(const Key('online-device-no'));
+  testWidgets('扫码得到设备编号后自动查询', (tester) async {
+    String? queriedDeviceNo;
+    await _pumpWidget(
+      tester,
+      _app(
+        scannedDeviceNo: 'P001',
+        onQuery: (deviceNo) async {
+          queriedDeviceNo = deviceNo;
+          return _result(
+            type: 'query',
+            deviceNo: deviceNo,
+            data: _deviceData(deviceNo: deviceNo),
+          );
+        },
+      ),
+    );
 
-    await tester.tap(input);
-    await tester.pump();
-    expect(_inputHasFocus(tester, input), isTrue);
+    await tester.tap(find.byKey(const Key('online-scan')));
+    await tester.pumpAndSettle();
 
-    await tester.tap(find.text('设备查询'));
-    await tester.pump();
-    expect(_inputHasFocus(tester, input), isFalse);
+    expect(queriedDeviceNo, 'P001');
+    expect(find.text('设备名称-P001'), findsOneWidget);
   });
 
   testWidgets('查询成功后按固定 15 列展示整行数据', (tester) async {
@@ -66,9 +74,7 @@ void main() {
       ),
     );
 
-    await tester.enterText(find.byKey(const Key('online-device-no')), ' P001 ');
-    await tester.tap(find.byKey(const Key('online-query')));
-    await tester.pumpAndSettle();
+    await _queryDevice(tester);
 
     expect(find.byKey(const Key('online-column-部门')), findsOneWidget);
     expect(find.byKey(const Key('online-column-计量有效期至')), findsOneWidget);
@@ -81,6 +87,7 @@ void main() {
     await _pumpWidget(
       tester,
       _app(
+        scannedDeviceNo: 'P999',
         onQuery: (_) async => _result(
           type: 'query',
           success: false,
@@ -89,9 +96,7 @@ void main() {
       ),
     );
 
-    await tester.enterText(find.byKey(const Key('online-device-no')), 'P999');
-    await tester.tap(find.byKey(const Key('online-query')));
-    await tester.pumpAndSettle();
+    await _queryDevice(tester);
 
     expect(find.text('未找到设备编号: P999'), findsOneWidget);
   });
@@ -108,7 +113,7 @@ void main() {
       ),
     );
 
-    await _queryDevice(tester, 'P001');
+    await _queryDevice(tester);
     expect(
       find.descendant(
         of: find.byKey(const Key('online-value-部门')),
@@ -164,7 +169,7 @@ void main() {
       ),
     );
 
-    await _queryDevice(tester, 'P001');
+    await _queryDevice(tester);
     await tester.ensureVisible(find.byKey(const Key('online-edit')));
     await tester.tap(find.byKey(const Key('online-edit')));
     await tester.pumpAndSettle();
@@ -229,7 +234,7 @@ void main() {
       ),
     );
 
-    await _queryDevice(tester, 'P001');
+    await _queryDevice(tester);
     await tester.ensureVisible(find.byKey(const Key('online-edit')));
     await tester.tap(find.byKey(const Key('online-edit')));
     await tester.pumpAndSettle();
@@ -275,17 +280,10 @@ void main() {
       ),
       findsOneWidget,
     );
-    expect(
-      tester
-          .widget<TextField>(find.byKey(const Key('online-device-no')))
-          .controller!
-          .text,
-      'P002',
-    );
     expect(find.text('新增成功'), findsOneWidget);
   });
 
-  testWidgets('删除二次确认后清空结果但保留输入框', (tester) async {
+  testWidgets('删除二次确认后清空查询结果', (tester) async {
     String? deletedNo;
     await _pumpWidget(
       tester,
@@ -302,7 +300,7 @@ void main() {
       ),
     );
 
-    await _queryDevice(tester, 'P001');
+    await _queryDevice(tester);
     await tester.ensureVisible(find.byKey(const Key('online-delete')));
     await tester.tap(find.byKey(const Key('online-delete')));
     await tester.pump();
@@ -312,13 +310,6 @@ void main() {
 
     expect(deletedNo, 'P001');
     expect(find.byKey(const Key('online-value-设备编号')), findsNothing);
-    expect(
-      tester
-          .widget<TextField>(find.byKey(const Key('online-device-no')))
-          .controller!
-          .text,
-      'P001',
-    );
     expect(find.text('删除成功'), findsOneWidget);
   });
 
@@ -339,7 +330,7 @@ void main() {
       ),
     );
 
-    await _queryDevice(tester, 'P001');
+    await _queryDevice(tester);
     await tester.ensureVisible(find.byKey(const Key('online-edit')));
     await tester.tap(find.byKey(const Key('online-edit')));
     await tester.pumpAndSettle();
@@ -350,9 +341,9 @@ void main() {
   });
 }
 
-/// 验证在线接口配置可以保存并显示 URL 对应的文件名。
+/// 验证在线接口配置可以保存并显示完整 URL。
 void _registerConfigTests() {
-  testWidgets('保存接口配置后显示 URL 文件名并可再次读取', (tester) async {
+  testWidgets('保存接口配置后显示 URL 并可再次读取', (tester) async {
     await tester.pumpWidget(const MaterialApp(home: OnlineConfigPage()));
 
     await tester.enterText(
@@ -366,7 +357,10 @@ void _registerConfigTests() {
     await tester.tap(find.byKey(const Key('online-config-save')));
     await tester.pumpAndSettle();
 
-    expect(find.text('当前文件: device_sync_task'), findsOneWidget);
+    expect(
+      find.text('当前 URL: https://example.com/scripts/device_sync_task'),
+      findsOneWidget,
+    );
     expect(
       tester
           .widget<TextField>(find.byKey(const Key('online-config-token')))
@@ -385,6 +379,7 @@ Widget _app({
   Future<DeviceResult> Function(String, Map<String, dynamic>)? onModify,
   Future<DeviceResult> Function(Map<String, dynamic>)? onAdd,
   Future<DeviceResult> Function(String)? onDelete,
+  String? scannedDeviceNo = 'P001',
 }) {
   return MaterialApp(
     home: OnlinePage(
@@ -392,6 +387,7 @@ Widget _app({
       onModify: onModify,
       onAdd: onAdd,
       onDelete: onDelete,
+      onScan: (_) async => scannedDeviceNo,
     ),
   );
 }
@@ -442,10 +438,9 @@ DeviceResult _result({
   });
 }
 
-/// 在测试中执行一次设备编号查询并等待页面完成刷新。
-Future<void> _queryDevice(WidgetTester tester, String deviceNo) async {
-  await tester.enterText(find.byKey(const Key('online-device-no')), deviceNo);
-  await tester.tap(find.byKey(const Key('online-query')));
+/// 在测试中扫码一次设备编号并等待页面完成查询。
+Future<void> _queryDevice(WidgetTester tester) async {
+  await tester.tap(find.byKey(const Key('online-scan')));
   await tester.pumpAndSettle();
 }
 
@@ -466,12 +461,4 @@ Future<void> _saveEditor(WidgetTester tester) async {
   await tester.ensureVisible(saveButton);
   await tester.tap(saveButton);
   await tester.pumpAndSettle();
-}
-
-/// 返回指定文本框内部 EditableText 的实际焦点状态。
-bool _inputHasFocus(WidgetTester tester, Finder textField) {
-  final editableText = tester.widget<EditableText>(
-    find.descendant(of: textField, matching: find.byType(EditableText)),
-  );
-  return editableText.focusNode.hasFocus;
 }

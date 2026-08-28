@@ -6,14 +6,6 @@ class OnlineApiConfig {
   final String token;
 
   const OnlineApiConfig({required this.url, required this.token});
-
-  /// 返回 URL 最后一个路径段，作为页面上的配置名称。
-  String get fileName {
-    final segments = (Uri.tryParse(url)?.pathSegments ?? const <String>[])
-        .where((segment) => segment.isNotEmpty)
-        .toList();
-    return segments.isEmpty ? url : segments.last;
-  }
 }
 
 /// 保存和读取在线脚本接口配置。

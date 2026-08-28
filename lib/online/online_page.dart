@@ -1,6 +1,7 @@
 import 'package:excel_app/device_edit_page.dart';
 import 'package:excel_app/online/online_config_page.dart';
 import 'package:excel_app/online/online_config_store.dart';
+import 'package:excel_app/scanner_page.dart';
 import 'package:excel_app/utils/net_util.dart';
 import 'package:flutter/material.dart';
 
@@ -40,12 +41,16 @@ typedef DeviceAddCallback = Future<DeviceResult> Function(
 /// 定义在线设备删除接口的可替换回调。
 typedef DeviceDeleteCallback = Future<DeviceResult> Function(String deviceNo);
 
+/// 定义设备扫码操作的可替换回调。
+typedef DeviceScanCallback = Future<String?> Function(BuildContext context);
+
 /// 提供在线设备的查询、修改、新增和删除操作。
 class OnlinePage extends StatefulWidget {
   final DeviceQueryCallback? onQuery;
   final DeviceModifyCallback? onModify;
   final DeviceAddCallback? onAdd;
   final DeviceDeleteCallback? onDelete;
+  final DeviceScanCallback? onScan;
   final OnlineConfigStore configStore;
 
   /// Creates an online device page with optional API callbacks for testing.
@@ -55,6 +60,7 @@ class OnlinePage extends StatefulWidget {
     this.onModify,
     this.onAdd,
     this.onDelete,
+    this.onScan,
     this.configStore = const OnlineConfigStore(),
   });
 
@@ -64,7 +70,6 @@ class OnlinePage extends StatefulWidget {
 }
 
 class _OnlinePageState extends State<OnlinePage> {
-  final TextEditingController _controller = TextEditingController();
   bool _loading = false;
   Map<String, String>? _data;
   OnlineApiConfig? _apiConfig;
@@ -78,14 +83,7 @@ class _OnlinePageState extends State<OnlinePage> {
     _loadConfig();
   }
 
-  /// Releases the device number input controller.
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
-
-  /// 读取上次保存的接口配置并刷新当前文件名称。
+  /// 读取上次保存的接口配置并刷新当前 URL。
   Future<void> _loadConfig() async {
     final config = await widget.configStore.load();
     if (mounted) setState(() => _apiConfig = config);
@@ -188,24 +186,31 @@ class _OnlinePageState extends State<OnlinePage> {
     };
   }
 
-  /// Returns a human-readable message for an API or transport exception.
+  /// 返回接口或传输异常的可读消息。
   String _errorText(Object error) {
     if (error is DeviceApiException) return error.message;
     return error.toString();
   }
 
-  /// Removes focus from the current input when another page area is tapped.
-  void _dismissKeyboard() {
-    FocusManager.instance.primaryFocus?.unfocus();
+  /// 打开扫码页，取得设备编号后自动执行查询。
+  Future<void> _scanAndQuery() async {
+    if (_loading) return;
+    final no = await (widget.onScan?.call(context) ??
+        Navigator.push<String>(
+          context,
+          MaterialPageRoute(builder: (_) => const ScannerPage()),
+        ));
+    if (!mounted || no == null) return;
+    await _query(no);
   }
 
-  /// Queries the remote table by the device number in the input field.
-  Future<void> _query() async {
+  /// 按扫码得到的设备编号查询远端设备行。
+  Future<void> _query(String deviceNo) async {
     if (_loading) return;
-    final no = _controller.text.trim();
+    final no = deviceNo.trim();
     if (no.isEmpty) {
       setState(() {
-        _error = '请输入设备编号';
+        _error = '未识别到设备编号';
         _notice = null;
       });
       return;
@@ -299,7 +304,6 @@ class _OnlinePageState extends State<OnlinePage> {
       if (!mounted) return;
       final added = _normalizeData(result.data, fallback: data);
       final addedNo = result.deviceNo ?? added['设备编号'] ?? '';
-      _controller.text = addedNo;
       setState(() {
         _data = added;
         _deviceNo = addedNo;
@@ -424,110 +428,85 @@ class _OnlinePageState extends State<OnlinePage> {
     );
   }
 
-  /// Builds the online page input, operation buttons, status and result table.
+  /// 构建扫码、配置、设备操作和结果展示页面。
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: _dismissKeyboard,
-      child: Scaffold(
-        appBar: AppBar(
-          title: GestureDetector(
-            onTap: _dismissKeyboard,
-            child: const Text('设备查询'),
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('在线设备'),
+        actions: [
+          IconButton(
+            key: const Key('online-config'),
+            onPressed: _openConfig,
+            icon: const Icon(Icons.settings_outlined),
+            tooltip: '接口配置',
           ),
-          actions: [
-            IconButton(
-              key: const Key('online-config'),
-              onPressed: _openConfig,
-              icon: const Icon(Icons.settings_outlined),
-              tooltip: '接口配置',
-            ),
-          ],
-        ),
-        body: SafeArea(
-          child: SingleChildScrollView(
-            keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Text(
-                  '当前文件: ${_apiConfig?.fileName ?? '未配置'}',
-                  key: const Key('online-current-file'),
-                  style: Theme.of(context).textTheme.bodyMedium,
+        ],
+      ),
+      body: SafeArea(
+        child: SingleChildScrollView(
+          keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              SelectableText(
+                '当前 URL: ${_apiConfig?.url ?? '未配置'}',
+                key: const Key('online-current-file'),
+                style: Theme.of(context).textTheme.bodyMedium,
+              ),
+              const SizedBox(height: 12),
+              FilledButton.icon(
+                key: const Key('online-scan'),
+                onPressed: _loading ? null : _scanAndQuery,
+                icon: _loading
+                    ? const SizedBox(
+                        width: 18,
+                        height: 18,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Icon(Icons.qr_code_scanner),
+                label: const Text('扫描设备编号'),
+              ),
+              const SizedBox(height: 12),
+              Align(
+                alignment: Alignment.centerLeft,
+                child: OutlinedButton.icon(
+                  key: const Key('online-add'),
+                  onPressed: _loading ? null : () => _openEditor(isNew: true),
+                  icon: const Icon(Icons.add),
+                  label: const Text('新增设备'),
                 ),
-                const SizedBox(height: 12),
-                Row(
-                  children: [
-                    Expanded(
-                      child: TextField(
-                        key: const Key('online-device-no'),
-                        controller: _controller,
-                        textInputAction: TextInputAction.search,
-                        onSubmitted: (_) => _query(),
-                        onTapOutside: (_) => _dismissKeyboard(),
-                        decoration: const InputDecoration(
-                          labelText: '设备编号',
-                          hintText: '请输入设备编号',
-                          border: OutlineInputBorder(),
-                        ),
-                      ),
+              ),
+              if (_error != null)
+                Padding(
+                  padding: const EdgeInsets.only(top: 12),
+                  child: Card(
+                    color: Theme.of(context).colorScheme.errorContainer,
+                    child: Padding(
+                      padding: const EdgeInsets.all(12),
+                      child: Text(_error!),
                     ),
-                    const SizedBox(width: 12),
-                    FilledButton.icon(
-                      key: const Key('online-query'),
-                      onPressed: _loading ? null : _query,
-                      icon: _loading
-                          ? const SizedBox(
-                              width: 18,
-                              height: 18,
-                              child: CircularProgressIndicator(strokeWidth: 2),
-                            )
-                          : const Icon(Icons.search),
-                      label: const Text('查询'),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 12),
-                Align(
-                  alignment: Alignment.centerLeft,
-                  child: OutlinedButton.icon(
-                    key: const Key('online-add'),
-                    onPressed: _loading ? null : () => _openEditor(isNew: true),
-                    icon: const Icon(Icons.add),
-                    label: const Text('新增设备'),
                   ),
                 ),
-                if (_error != null)
-                  Padding(
-                    padding: const EdgeInsets.only(top: 12),
-                    child: Card(
-                      color: Theme.of(context).colorScheme.errorContainer,
-                      child: Padding(
-                        padding: const EdgeInsets.all(12),
-                        child: Text(_error!),
-                      ),
+              if (_notice != null)
+                Padding(
+                  padding: const EdgeInsets.only(top: 12),
+                  child: Text(
+                    _notice!,
+                    key: const Key('online-notice'),
+                    style: TextStyle(
+                      color: Theme.of(context).colorScheme.primary,
+                      fontWeight: FontWeight.w700,
                     ),
                   ),
-                if (_notice != null)
-                  Padding(
-                    padding: const EdgeInsets.only(top: 12),
-                    child: Text(
-                      _notice!,
-                      key: const Key('online-notice'),
-                      style: TextStyle(
-                        color: Theme.of(context).colorScheme.primary,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                  ),
-                if (_data != null)
-                  Padding(
-                    padding: const EdgeInsets.only(top: 12),
-                    child: _buildResult(),
-                  ),
-              ],
-            ),
+                ),
+              if (_data != null)
+                Padding(
+                  padding: const EdgeInsets.only(top: 12),
+                  child: _buildResult(),
+                ),
+            ],
           ),
         ),
       ),

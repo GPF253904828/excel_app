@@ -78,7 +78,7 @@ class _OnlineConfigPageState extends State<OnlineConfigPage> {
         padding: const EdgeInsets.all(20),
         children: [
           if (_savedConfig != null) ...[
-            Text('当前文件: ${_savedConfig!.fileName}'),
+            SelectableText('当前 URL: ${_savedConfig!.url}'),
             const SizedBox(height: 20),
           ],
           TextField(
