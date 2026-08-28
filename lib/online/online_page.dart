@@ -168,6 +168,11 @@ class _OnlinePageState extends State<OnlinePage> {
     return error.toString();
   }
 
+  /// Removes focus from the current input when another page area is tapped.
+  void _dismissKeyboard() {
+    FocusManager.instance.primaryFocus?.unfocus();
+  }
+
   /// Queries the remote table by the device number in the input field.
   Future<void> _query() async {
     if (_loading) return;
@@ -396,83 +401,93 @@ class _OnlinePageState extends State<OnlinePage> {
   /// Builds the online page input, operation buttons, status and result table.
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text('设备查询')),
-      body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Row(
-                children: [
-                  Expanded(
-                    child: TextField(
-                      key: const Key('online-device-no'),
-                      controller: _controller,
-                      textInputAction: TextInputAction.search,
-                      onSubmitted: (_) => _query(),
-                      decoration: const InputDecoration(
-                        labelText: '设备编号',
-                        hintText: '请输入设备编号',
-                        border: OutlineInputBorder(),
+    return GestureDetector(
+      onTap: _dismissKeyboard,
+      child: Scaffold(
+        appBar: AppBar(
+          title: GestureDetector(
+            onTap: _dismissKeyboard,
+            child: const Text('设备查询'),
+          ),
+        ),
+        body: SafeArea(
+          child: SingleChildScrollView(
+            keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Row(
+                  children: [
+                    Expanded(
+                      child: TextField(
+                        key: const Key('online-device-no'),
+                        controller: _controller,
+                        textInputAction: TextInputAction.search,
+                        onSubmitted: (_) => _query(),
+                        onTapOutside: (_) => _dismissKeyboard(),
+                        decoration: const InputDecoration(
+                          labelText: '设备编号',
+                          hintText: '请输入设备编号',
+                          border: OutlineInputBorder(),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    FilledButton.icon(
+                      key: const Key('online-query'),
+                      onPressed: _loading ? null : _query,
+                      icon: _loading
+                          ? const SizedBox(
+                              width: 18,
+                              height: 18,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            )
+                          : const Icon(Icons.search),
+                      label: const Text('查询'),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: OutlinedButton.icon(
+                    key: const Key('online-add'),
+                    onPressed: _loading ? null : () => _openEditor(isNew: true),
+                    icon: const Icon(Icons.add),
+                    label: const Text('新增设备'),
+                  ),
+                ),
+                if (_error != null)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 12),
+                    child: Card(
+                      color: Theme.of(context).colorScheme.errorContainer,
+                      child: Padding(
+                        padding: const EdgeInsets.all(12),
+                        child: Text(_error!),
                       ),
                     ),
                   ),
-                  const SizedBox(width: 12),
-                  FilledButton.icon(
-                    key: const Key('online-query'),
-                    onPressed: _loading ? null : _query,
-                    icon: _loading
-                        ? const SizedBox(
-                            width: 18,
-                            height: 18,
-                            child: CircularProgressIndicator(strokeWidth: 2),
-                          )
-                        : const Icon(Icons.search),
-                    label: const Text('查询'),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 12),
-              Align(
-                alignment: Alignment.centerLeft,
-                child: OutlinedButton.icon(
-                  key: const Key('online-add'),
-                  onPressed: _loading ? null : () => _openEditor(isNew: true),
-                  icon: const Icon(Icons.add),
-                  label: const Text('新增设备'),
-                ),
-              ),
-              if (_error != null)
-                Padding(
-                  padding: const EdgeInsets.only(top: 12),
-                  child: Card(
-                    color: Theme.of(context).colorScheme.errorContainer,
-                    child: Padding(
-                      padding: const EdgeInsets.all(12),
-                      child: Text(_error!),
+                if (_notice != null)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 12),
+                    child: Text(
+                      _notice!,
+                      key: const Key('online-notice'),
+                      style: TextStyle(
+                        color: Theme.of(context).colorScheme.primary,
+                        fontWeight: FontWeight.w700,
+                      ),
                     ),
                   ),
-                ),
-              if (_notice != null)
-                Padding(
-                  padding: const EdgeInsets.only(top: 12),
-                  child: Text(
-                    _notice!,
-                    key: const Key('online-notice'),
-                    style: TextStyle(
-                      color: Theme.of(context).colorScheme.primary,
-                      fontWeight: FontWeight.w700,
-                    ),
+                if (_data != null)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 12),
+                    child: _buildResult(),
                   ),
-                ),
-              if (_data != null)
-                Padding(
-                  padding: const EdgeInsets.only(top: 12),
-                  child: _buildResult(),
-                ),
-            ],
+              ],
+            ),
           ),
         ),
       ),

@@ -5,6 +5,29 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
+  testWidgets('拖动编辑页面时隐藏键盘', (tester) async {
+    await tester.pumpWidget(_buildPage(isNew: true));
+
+    final listView = tester.widget<ListView>(find.byType(ListView));
+    expect(
+      listView.keyboardDismissBehavior,
+      ScrollViewKeyboardDismissBehavior.onDrag,
+    );
+  });
+
+  testWidgets('点击编辑页面非输入框时隐藏键盘', (tester) async {
+    await tester.pumpWidget(_buildPage(isNew: true));
+    final input = find.byKey(const Key('field-设备名称'));
+
+    await tester.tap(input);
+    await tester.pump();
+    expect(_inputHasFocus(tester, input), isTrue);
+
+    await tester.tap(find.text('编辑设备'));
+    await tester.pump();
+    expect(_inputHasFocus(tester, input), isFalse);
+  });
+
   testWidgets('saves a complete new row and returns it', (tester) async {
     List<String>? savedRow;
     await tester.pumpWidget(
@@ -236,4 +259,12 @@ Widget _buildPage({required bool isNew}) {
       onSave: (_) async {},
     ),
   );
+}
+
+/// 返回指定文本框内部 EditableText 的实际焦点状态。
+bool _inputHasFocus(WidgetTester tester, Finder textField) {
+  final editableText = tester.widget<EditableText>(
+    find.descendant(of: textField, matching: find.byType(EditableText)),
+  );
+  return editableText.focusNode.hasFocus;
 }

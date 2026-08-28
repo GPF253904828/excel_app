@@ -64,6 +64,11 @@ class _DeviceEditPageState extends State<DeviceEditPage> {
     setState(() => _deviceCodeEditable = true);
   }
 
+  /// Removes focus from the current input when another page area is tapped.
+  void _dismissKeyboard() {
+    FocusManager.instance.primaryFocus?.unfocus();
+  }
+
   /// Collects the row, saves it, and returns it only after a successful save.
   Future<void> _save() async {
     if (_saving) return;
@@ -103,6 +108,7 @@ class _DeviceEditPageState extends State<DeviceEditPage> {
       key: Key('field-$header'),
       controller: _controllers[index],
       enabled: !_saving && (header != '设备编号' || _deviceCodeEditable),
+      onTapOutside: (_) => _dismissKeyboard(),
       decoration: const InputDecoration(
         isDense: true,
         hintText: '请输入内容',
@@ -142,28 +148,37 @@ class _DeviceEditPageState extends State<DeviceEditPage> {
   /// Builds the page fields, save action, and save error state.
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text('编辑设备')),
-      body: SafeArea(
-        child: ListView(
-          padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
-          children: [
-            for (var index = 0; index < widget.headers.length; index++)
-              Padding(
-                padding: const EdgeInsets.only(bottom: 12),
-                child: _buildField(index),
+    return GestureDetector(
+      onTap: _dismissKeyboard,
+      child: Scaffold(
+        appBar: AppBar(
+          title: GestureDetector(
+            onTap: _dismissKeyboard,
+            child: const Text('编辑设备'),
+          ),
+        ),
+        body: SafeArea(
+          child: ListView(
+            keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+            padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
+            children: [
+              for (var index = 0; index < widget.headers.length; index++)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 12),
+                  child: _buildField(index),
+                ),
+              if (_errorMessage != null)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 12),
+                  child: Text(_errorMessage!),
+                ),
+              FilledButton.icon(
+                onPressed: _saving ? null : _save,
+                icon: const Icon(Icons.save_outlined),
+                label: const Text('保存'),
               ),
-            if (_errorMessage != null)
-              Padding(
-                padding: const EdgeInsets.only(bottom: 12),
-                child: Text(_errorMessage!),
-              ),
-            FilledButton.icon(
-              onPressed: _saving ? null : _save,
-              icon: const Icon(Icons.save_outlined),
-              label: const Text('保存'),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );

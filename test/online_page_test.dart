@@ -6,6 +6,31 @@ import 'package:flutter_test/flutter_test.dart';
 
 /// 验证在线设备页面的固定字段展示入口已经存在。
 void main() {
+  testWidgets('拖动在线页面时隐藏键盘', (tester) async {
+    await _pumpWidget(tester, _app());
+
+    final scrollView = tester.widget<SingleChildScrollView>(
+      find.byType(SingleChildScrollView),
+    );
+    expect(
+      scrollView.keyboardDismissBehavior,
+      ScrollViewKeyboardDismissBehavior.onDrag,
+    );
+  });
+
+  testWidgets('点击在线页面非输入框时隐藏键盘', (tester) async {
+    await _pumpWidget(tester, _app());
+    final input = find.byKey(const Key('online-device-no'));
+
+    await tester.tap(input);
+    await tester.pump();
+    expect(_inputHasFocus(tester, input), isTrue);
+
+    await tester.tap(find.text('设备查询'));
+    await tester.pump();
+    expect(_inputHasFocus(tester, input), isFalse);
+  });
+
   testWidgets('查询成功后按固定 15 列展示整行数据', (tester) async {
     await _pumpWidget(
       tester,
@@ -389,4 +414,12 @@ Future<void> _saveEditor(WidgetTester tester) async {
   await tester.ensureVisible(saveButton);
   await tester.tap(saveButton);
   await tester.pumpAndSettle();
+}
+
+/// 返回指定文本框内部 EditableText 的实际焦点状态。
+bool _inputHasFocus(WidgetTester tester, Finder textField) {
+  final editableText = tester.widget<EditableText>(
+    find.descendant(of: textField, matching: find.byType(EditableText)),
+  );
+  return editableText.focusNode.hasFocus;
 }
