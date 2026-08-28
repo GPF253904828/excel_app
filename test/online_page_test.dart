@@ -48,6 +48,116 @@ void main() {
     expect(find.text('未找到设备编号: P999'), findsOneWidget);
   });
 
+  testWidgets('兼容脚本实际字段并完整传入编辑器', (tester) async {
+    await _pumpWidget(
+      tester,
+      _app(
+        onQuery: (_) async => _result(
+          type: 'query',
+          deviceNo: 'P001',
+          data: _actualDeviceData(deviceNo: 'P001'),
+        ),
+      ),
+    );
+
+    await _queryDevice(tester, 'P001');
+    expect(
+      find.descendant(
+        of: find.byKey(const Key('online-value-归属部门')),
+        matching: find.text('质量管理部'),
+      ),
+      findsOneWidget,
+    );
+    expect(
+      find.descendant(
+        of: find.byKey(const Key('online-value-设备状态')),
+        matching: find.text('正常使用'),
+      ),
+      findsOneWidget,
+    );
+
+    await tester.ensureVisible(find.byKey(const Key('online-edit')));
+    await tester.tap(find.byKey(const Key('online-edit')));
+    await tester.pumpAndSettle();
+    expect(
+      tester
+          .widget<TextField>(find.byKey(const Key('field-归属部门')))
+          .controller!
+          .text,
+      '质量管理部',
+    );
+    expect(
+      tester
+          .widget<TextField>(find.byKey(const Key('field-设备负责人')))
+          .controller!
+          .text,
+      '韩爽',
+    );
+  });
+
+  testWidgets('修改时把固定字段映射回脚本实际列名', (tester) async {
+    Map<String, dynamic>? modifiedData;
+    await _pumpWidget(
+      tester,
+      _app(
+        onQuery: (_) async => _result(
+          type: 'query',
+          deviceNo: 'P001',
+          data: _actualDeviceData(deviceNo: 'P001'),
+        ),
+        onModify: (_, data) async {
+          modifiedData = data;
+          return _result(
+            type: 'modify',
+            deviceNo: 'P001',
+            data: _actualDeviceData(deviceNo: 'P001'),
+          );
+        },
+      ),
+    );
+
+    await _queryDevice(tester, 'P001');
+    await tester.ensureVisible(find.byKey(const Key('online-edit')));
+    await tester.tap(find.byKey(const Key('online-edit')));
+    await tester.pumpAndSettle();
+    await _saveEditor(tester);
+
+    expect(modifiedData?['部门'], '质量管理部');
+    expect(modifiedData?['状态'], '正常使用');
+    expect(modifiedData?['仪器设备负责人'], '韩爽');
+    expect(modifiedData?.containsKey('归属部门'), isFalse);
+    expect(modifiedData?.containsKey('设备状态'), isFalse);
+    expect(modifiedData?.containsKey('设备负责人'), isFalse);
+  });
+
+  testWidgets('新增时使用脚本实际列名提交整行', (tester) async {
+    Map<String, dynamic>? addedData;
+    await _pumpWidget(
+      tester,
+      _app(
+        onAdd: (data) async {
+          addedData = data;
+          return _result(
+            type: 'add',
+            deviceNo: 'P002',
+            data: _actualDeviceData(deviceNo: 'P002'),
+          );
+        },
+      ),
+    );
+
+    await tester.tap(find.byKey(const Key('online-add')));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byKey(const Key('field-设备编号')), 'P002');
+    await _saveEditor(tester);
+
+    expect(addedData?['设备编号'], 'P002');
+    expect(addedData?['部门'], isEmpty);
+    expect(addedData?['状态'], isEmpty);
+    expect(addedData?['仪器设备负责人'], isEmpty);
+    expect(addedData?.containsKey('归属部门'), isFalse);
+  });
+
   testWidgets('修改编辑后的整行并用原设备编号调用接口', (tester) async {
     String? modifiedNo;
     Map<String, dynamic>? modifiedData;
@@ -214,6 +324,27 @@ Map<String, dynamic> _deviceData({required String deviceNo}) {
   return {
     for (final header in onlineDeviceHeaders)
       header: header == '设备编号' ? deviceNo : '$header-$deviceNo',
+  };
+}
+
+/// 构造 WPS 表格脚本实际返回的列名和一整行设备数据。
+Map<String, dynamic> _actualDeviceData({required String deviceNo}) {
+  return {
+    '部门': '质量管理部',
+    '来源': '自购',
+    '状态': '正常使用',
+    '设备编号': deviceNo,
+    '设备名称': '新飞牌冷藏冷冻箱',
+    '设备型号': 'BCD-239V',
+    '机身号': '/',
+    '生产厂家': '河南新飞电器有限公司',
+    '所在区域': 'PCR质检I区',
+    '所在房间': '',
+    '设备分类': '一般设备',
+    '仪器设备负责人': '韩爽',
+    '计量机构': '',
+    '证书类型': '',
+    '计量有效期至': '',
   };
 }
 

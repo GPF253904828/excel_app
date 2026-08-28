@@ -21,6 +21,21 @@ const List<String> onlineDeviceHeaders = <String>[
   '计量有效期至',
 ];
 
+/// 页面字段到 WPS 脚本表头的兼容名称。
+const Map<String, List<String>> _onlineDeviceFieldAliases =
+    <String, List<String>>{
+  '归属部门': <String>['归属部门', '部门'],
+  '设备状态': <String>['设备状态', '状态'],
+  '设备负责人': <String>['设备负责人', '仪器设备负责人'],
+};
+
+/// 新增请求默认使用脚本当前表格中的实际表头名称。
+const Map<String, String> _defaultOnlineApiKeys = <String, String>{
+  '归属部门': '部门',
+  '设备状态': '状态',
+  '设备负责人': '仪器设备负责人',
+};
+
 /// 定义在线设备查询接口的可替换回调。
 typedef DeviceQueryCallback = Future<DeviceResult> Function(String deviceNo);
 
@@ -63,6 +78,7 @@ class _OnlinePageState extends State<OnlinePage> {
   final TextEditingController _controller = TextEditingController();
   bool _loading = false;
   Map<String, String>? _data;
+  Map<String, String> _apiKeys = <String, String>{};
   String? _deviceNo;
   String? _error;
   String? _notice;
@@ -111,17 +127,38 @@ class _OnlinePageState extends State<OnlinePage> {
     Map<String, dynamic>? fallback,
   }) {
     final source = data ?? fallback ?? <String, dynamic>{};
-    return <String, String>{
-      for (final header in onlineDeviceHeaders)
-        header: (source[header] ?? '').toString(),
-    };
+    final resolvedKeys = <String, String>{};
+    final normalized = <String, String>{};
+    for (final header in onlineDeviceHeaders) {
+      final key = _findApiKey(header, data ?? <String, dynamic>{}) ??
+          _apiKeys[header] ??
+          _defaultOnlineApiKeys[header] ??
+          header;
+      resolvedKeys[header] = key;
+      normalized[header] = source.containsKey(key)
+          ? (source[key] ?? '').toString()
+          : (fallback?[header] ?? '').toString();
+    }
+    if (data != null && data.isNotEmpty) _apiKeys = resolvedKeys;
+    return normalized;
+  }
+
+  /// Finds the first compatible script key present in an API response.
+  String? _findApiKey(String header, Map<String, dynamic> source) {
+    final aliases = _onlineDeviceFieldAliases[header] ?? <String>[header];
+    for (final alias in aliases) {
+      if (source.containsKey(alias)) return alias;
+    }
+    return source.containsKey(header) ? header : null;
   }
 
   /// Converts one edited row into the column-to-value payload expected by the script.
   Map<String, dynamic> _rowToData(List<String> row) {
     return <String, dynamic>{
       for (var index = 0; index < onlineDeviceHeaders.length; index++)
-        onlineDeviceHeaders[index]: index < row.length ? row[index] : '',
+        _apiKeys[onlineDeviceHeaders[index]] ??
+            _defaultOnlineApiKeys[onlineDeviceHeaders[index]] ??
+            onlineDeviceHeaders[index]: index < row.length ? row[index] : '',
     };
   }
 
