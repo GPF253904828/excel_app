@@ -160,3 +160,151 @@ git add lib/home_page.dart lib/home_page_view.dart lib/local_page.dart lib/local
 git diff --cached --check
 git commit -m "feat: split home lobby and local config page"
 ```
+
+### Task 5: Add the Android build and fir.im API upload script
+
+**Files:**
+- Create: `scripts/build_and_upload_fir.sh`
+- Create: `test/build_and_upload_fir_test.sh`
+
+- [ ] **Step 1: Add a failure-path shell test**
+
+Create `test/build_and_upload_fir_test.sh` that runs the release script with the placeholder token and asserts it exits non-zero with a message asking for `FIR_API_TOKEN`. The test must run from any working directory by resolving the repository root from the test file location.
+
+- [ ] **Step 2: Run the shell test to verify the script is missing**
+
+Run:
+
+```bash
+bash test/build_and_upload_fir_test.sh
+```
+
+Expected: FAIL because `scripts/build_and_upload_fir.sh` does not exist.
+
+- [ ] **Step 3: Add the executable release script**
+
+Create `scripts/build_and_upload_fir.sh` with this behavior:
+
+```bash
+#!/usr/bin/env bash
+set -euo pipefail
+
+PROJECT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+FIR_API_TOKEN="${FIR_API_TOKEN:-YOUR_FIR_API_TOKEN}"
+FIR_BUNDLE_ID="${FIR_BUNDLE_ID:-YOUR_ANDROID_BUNDLE_ID}"
+FIR_API_URL="${FIR_API_URL:-http://api.appmeta.cn/apps}"
+APK_PATH="${PROJECT_ROOT}/build/app/outputs/flutter-apk/app-release.apk"
+
+if [[ "${FIR_API_TOKEN}" == "YOUR_FIR_API_TOKEN" ]]; then
+  echo "请设置 FIR_API_TOKEN 后再上传 fir.im。" >&2
+  exit 1
+fi
+if [[ "${FIR_BUNDLE_ID}" == "YOUR_ANDROID_BUNDLE_ID" ]]; then
+  echo "请设置 FIR_BUNDLE_ID 后再上传 fir.im。" >&2
+  exit 1
+fi
+
+command -v flutter >/dev/null 2>&1 || {
+  echo "未找到 flutter 命令。" >&2
+  exit 1
+}
+command -v curl >/dev/null 2>&1 || {
+  echo "未找到 curl 命令。" >&2
+  exit 1
+}
+command -v python3 >/dev/null 2>&1 || {
+  echo "未找到 python3 命令，用于解析上传凭证。" >&2
+  exit 1
+}
+
+cd "${PROJECT_ROOT}"
+flutter build apk --release
+
+if [[ ! -f "${APK_PATH}" ]]; then
+  echo "未找到构建产物: ${APK_PATH}" >&2
+  exit 1
+fi
+
+PUBSPEC_VERSION="$(awk '$1 == "version:" { print $2; exit }' pubspec.yaml)"
+FIR_VERSION="${FIR_VERSION:-${PUBSPEC_VERSION%%+*}}"
+FIR_BUILD="${FIR_BUILD:-${PUBSPEC_VERSION#*+}}"
+if [[ -z "${FIR_BUILD}" || "${FIR_BUILD}" == "${PUBSPEC_VERSION}" ]]; then
+  FIR_BUILD="$(date +%Y%m%d%H%M%S)"
+fi
+
+REQUEST_BODY="$(FIR_API_TOKEN="${FIR_API_TOKEN}" FIR_BUNDLE_ID="${FIR_BUNDLE_ID}" python3 - <<'PY'
+import json
+import os
+
+print(json.dumps({
+    'type': 'android',
+    'bundle_id': os.environ['FIR_BUNDLE_ID'],
+    'api_token': os.environ['FIR_API_TOKEN'],
+}))
+PY
+)"
+
+CREDENTIALS="$(curl --fail --silent --show-error \
+  --request POST "${FIR_API_URL}" \
+  --header "Content-Type: application/json" \
+  --data "${REQUEST_BODY}")"
+
+CREDENTIAL_FIELDS="$(CREDENTIALS="${CREDENTIALS}" python3 - <<'PY'
+import json
+import os
+
+binary = json.loads(os.environ['CREDENTIALS'])['cert']['binary']
+print('\t'.join(binary[key] for key in ('upload_url', 'key', 'token')))
+PY
+)
+IFS=$'\t' read -r UPLOAD_URL UPLOAD_KEY UPLOAD_TOKEN <<< "${CREDENTIAL_FIELDS}"
+
+UPLOAD_RESPONSE="$(curl --fail --silent --show-error \
+  --form "key=${UPLOAD_KEY}" \
+  --form "token=${UPLOAD_TOKEN}" \
+  --form "file=@${APK_PATH}" \
+  --form "x:name=${FIR_APP_NAME:-excel_app}" \
+  --form "x:version=${FIR_VERSION}" \
+  --form "x:build=${FIR_BUILD}" \
+  --form "x:changelog=${FIR_CHANGELOG:-$(git log -1 --pretty=%s)}" \
+  "${UPLOAD_URL}")"
+
+if ! UPLOAD_RESPONSE="${UPLOAD_RESPONSE}" python3 - <<'PY'
+import json
+import os
+import sys
+
+try:
+    completed = json.loads(os.environ['UPLOAD_RESPONSE']).get('is_completed') is True
+except (TypeError, json.JSONDecodeError):
+    completed = False
+sys.exit(0 if completed else 1)
+PY
+then
+  echo "fir.im 上传未完成: ${UPLOAD_RESPONSE}" >&2
+  exit 1
+fi
+
+echo "fir.im 上传完成。"
+```
+
+Add function-level comments if the script is later split into functions; keep the current straight-line flow to avoid an unnecessary shell abstraction. Mark the file executable.
+
+- [ ] **Step 4: Run the shell test and syntax check**
+
+Run:
+
+```bash
+bash test/build_and_upload_fir_test.sh
+bash -n scripts/build_and_upload_fir.sh
+```
+
+Expected: the placeholder-token test passes and the script has valid Bash syntax. Do not perform a real fir.im upload without the user's token and bundle ID.
+
+- [ ] **Step 5: Commit the release script**
+
+```bash
+git add scripts/build_and_upload_fir.sh test/build_and_upload_fir_test.sh
+git diff --cached --check
+git commit -m "build: add fir upload script"
+```
