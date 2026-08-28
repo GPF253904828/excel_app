@@ -1,0 +1,107 @@
+// 入参：Context.argv = { type, device_no, data }
+// type: query(查询) / modify(修改) / add(新增) / delete(删除)，也支持中文写法
+const argv = Context.argv || {}
+let type = String(argv.type || '').trim().toLowerCase()
+
+const TYPE_MAP = {
+  'query': 'query', '查询': 'query',
+  'modify': 'modify', '修改': 'modify',
+  'add': 'add', '新增': 'add',
+  'delete': 'delete', '删除': 'delete'
+}
+type = TYPE_MAP[type] || type
+
+const deviceNo = String(argv.device_no == null ? '' : argv.device_no).trim()
+const data = (argv.data && typeof argv.data === 'object') ? argv.data : {}
+
+const sheet = Application.ActiveSheet
+const used = sheet.UsedRange
+const startRow = used.Row
+const startCol = used.Column
+const nRows = used.Rows.Count
+const nCols = used.Columns.Count
+
+// 读取表头并定位「设备编号」列
+const headers = []
+let deviceCol = -1
+for (let j = 0; j < nCols; j++) {
+  const h = String(sheet.Cells(startRow, startCol + j).Text).trim()
+  headers.push(h)
+  if (h === '设备编号') deviceCol = startCol + j
+}
+
+function findRow(no) {
+  if (deviceCol < 0) return -1
+  const target = String(no).trim()
+  for (let i = 1; i < nRows; i++) {
+    const rowNum = startRow + i
+    if (String(sheet.Cells(rowNum, deviceCol).Text).trim() === target) return rowNum
+  }
+  return -1
+}
+
+function readRow(rowNum) {
+  const rowData = {}
+  for (let j = 0; j < nCols; j++) {
+    const key = headers[j]
+    if (key) rowData[key] = sheet.Cells(rowNum, startCol + j).Text
+  }
+  return rowData
+}
+
+function writeRow(rowNum, dataObj) {
+  for (let j = 0; j < nCols; j++) {
+    const key = headers[j]
+    if (!key) continue
+    if (Object.prototype.hasOwnProperty.call(dataObj, key)) {
+      sheet.Cells(rowNum, startCol + j).Value2 = dataObj[key]
+    }
+  }
+}
+
+if (!['query', 'modify', 'add', 'delete'].includes(type)) {
+  return { success: false, message: 'type 必须是 query/modify/add/delete（或 查询/修改/新增/删除）' }
+}
+if (deviceCol < 0) {
+  return { success: false, message: '未找到「设备编号」列' }
+}
+
+switch (type) {
+  case 'query': {
+    if (deviceNo === '') return { success: false, message: '参数 device_no 不能为空' }
+    const rowNum = findRow(deviceNo)
+    if (rowNum < 0) return { success: false, type: 'query', device_no: deviceNo, message: '未找到设备编号: ' + deviceNo }
+    return { success: true, type: 'query', device_no: deviceNo, row: rowNum, data: readRow(rowNum) }
+  }
+
+  case 'modify': {
+    if (deviceNo === '') return { success: false, message: '参数 device_no 不能为空' }
+    const rowNum = findRow(deviceNo)
+    if (rowNum < 0) return { success: false, type: 'modify', device_no: deviceNo, message: '未找到设备编号: ' + deviceNo }
+    if (!Object.keys(data).length) return { success: false, device_no: deviceNo, message: '修改时需传入 data 字段（至少一个列）' }
+    writeRow(rowNum, data)
+    return { success: true, type: 'modify', device_no: deviceNo, row: rowNum, data: readRow(rowNum), message: '修改成功' }
+  }
+
+  case 'add': {
+    const no = String(data['设备编号'] != null ? data['设备编号'] : deviceNo).trim()
+    if (no === '') return { success: false, type: 'add', message: '新增时需提供设备编号（argv.device_no 或 data.设备编号）' }
+    if (findRow(no) >= 0) return { success: false, type: 'add', device_no: no, message: '设备编号已存在，无法重复新增: ' + no }
+    let newRow = startRow + nRows
+    if (nRows <= 1) newRow = startRow + 1
+    while (String(sheet.Cells(newRow, startCol).Text).trim() !== '') newRow++
+    const payload = Object.assign({}, data)
+    if (!Object.prototype.hasOwnProperty.call(payload, '设备编号')) payload['设备编号'] = no
+    writeRow(newRow, payload)
+    return { success: true, type: 'add', device_no: no, row: newRow, data: readRow(newRow), message: '新增成功' }
+  }
+
+  case 'delete': {
+    if (deviceNo === '') return { success: false, message: '参数 device_no 不能为空' }
+    const rowNum = findRow(deviceNo)
+    if (rowNum < 0) return { success: false, type: 'delete', device_no: deviceNo, message: '未找到设备编号: ' + deviceNo }
+    const deletedData = readRow(rowNum)
+    sheet.Cells(rowNum, startCol).EntireRow.Delete()
+    return { success: true, type: 'delete', device_no: deviceNo, deletedRow: rowNum, deletedData: deletedData, message: '删除成功' }
+  }
+}
