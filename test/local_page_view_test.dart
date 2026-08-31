@@ -15,6 +15,7 @@ void main() {
           port: 8080,
           isRunning: true,
           hasFiles: true,
+          pendingExportFilename: '二维码合计.zip',
           onStart: () {},
           onStop: () => stopped = true,
           onOpenFiles: () {},
@@ -30,6 +31,7 @@ void main() {
     expect(find.text('停止服务'), findsOneWidget);
     expect(find.text('打开收到的文件'), findsOneWidget);
     expect(find.text('删除本地文件'), findsOneWidget);
+    expect(find.text('待导出: 二维码合计.zip'), findsOneWidget);
 
     await tester.tap(find.text('停止服务'));
     expect(stopped, isTrue);

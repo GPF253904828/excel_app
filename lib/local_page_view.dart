@@ -2,12 +2,15 @@ import 'package:flutter/material.dart';
 
 /// 本地配置页的纯展示层，只接收状态并转发用户操作。
 class LocalPageView extends StatelessWidget {
+  final String title;
   final String status;
   final String? localIp;
   final int port;
   final bool isRunning;
   final bool hasFiles;
   final String? receivedNotice;
+  final String? pendingExportFilename;
+  final bool showFileManagement;
   final VoidCallback? onDeleteFiles;
   final VoidCallback onStart;
   final VoidCallback onStop;
@@ -15,6 +18,7 @@ class LocalPageView extends StatelessWidget {
 
   const LocalPageView({
     super.key,
+    this.title = '本地配置',
     required this.status,
     required this.localIp,
     required this.port,
@@ -24,6 +28,8 @@ class LocalPageView extends StatelessWidget {
     required this.onStop,
     required this.onOpenFiles,
     this.receivedNotice,
+    this.pendingExportFilename,
+    this.showFileManagement = true,
     this.onDeleteFiles,
   });
 
@@ -35,7 +41,7 @@ class LocalPageView extends StatelessWidget {
     final textTheme = Theme.of(context).textTheme;
 
     return Scaffold(
-      appBar: AppBar(title: const Text('本地配置')),
+      appBar: AppBar(title: Text(title)),
       body: ListView(
         padding: const EdgeInsets.all(24),
         children: [
@@ -97,33 +103,46 @@ class LocalPageView extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 40),
-          SizedBox(
-            width: 200,
-            height: 60,
-            child: ElevatedButton.icon(
-              onPressed: hasFiles ? onOpenFiles : null,
-              icon: const Icon(Icons.file_download),
-              label: const Text('打开收到的文件'),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: hasFiles ? colors.primary : null,
-                foregroundColor: hasFiles ? colors.onPrimary : null,
+          if (pendingExportFilename != null) ...[
+            Text(
+              '待导出: $pendingExportFilename',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                color: colors.primary,
+                fontWeight: FontWeight.w600,
               ),
             ),
-          ),
-          const SizedBox(height: 20),
-          SizedBox(
-            width: 200,
-            height: 48,
-            child: OutlinedButton.icon(
-              onPressed: hasFiles ? onDeleteFiles : null,
-              icon: const Icon(Icons.delete_outline),
-              label: const Text('删除本地文件'),
-              style: OutlinedButton.styleFrom(
-                foregroundColor: colors.onSurfaceVariant,
-                side: BorderSide(color: colors.outline),
+            const SizedBox(height: 20),
+          ],
+          if (showFileManagement) ...[
+            SizedBox(
+              width: 200,
+              height: 60,
+              child: ElevatedButton.icon(
+                onPressed: hasFiles ? onOpenFiles : null,
+                icon: const Icon(Icons.file_download),
+                label: const Text('打开收到的文件'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: hasFiles ? colors.primary : null,
+                  foregroundColor: hasFiles ? colors.onPrimary : null,
+                ),
               ),
             ),
-          ),
+            const SizedBox(height: 20),
+            SizedBox(
+              width: 200,
+              height: 48,
+              child: OutlinedButton.icon(
+                onPressed: hasFiles ? onDeleteFiles : null,
+                icon: const Icon(Icons.delete_outline),
+                label: const Text('删除本地文件'),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: colors.onSurfaceVariant,
+                  side: BorderSide(color: colors.outline),
+                ),
+              ),
+            ),
+          ],
           if (receivedNotice != null) ...[
             const SizedBox(height: 12),
             Text(

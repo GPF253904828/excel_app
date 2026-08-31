@@ -21,9 +21,14 @@ class FileServer {
   /// 当保存目录已有文件时，询问是否允许用本次上传文件替换旧文件。
   Future<bool> Function(List<String> filenames)? onReplaceExistingFiles;
 
+  /// 电脑成功下载已排队导出文件后的回调。
+  void Function()? onExportDownloaded;
+
   FileServer({int port = 8080, required Directory saveDir})
       : _port = port,
         _saveDir = saveDir;
+
+  String? get pendingExportFilename => _pendingExportName;
 
   /// 排队一个等待电脑浏览器下载的文件及其 MIME 类型。
   void queueExport(
@@ -253,6 +258,7 @@ setInterval(pollExport, 1000);
     request.response.headers.contentLength = bytes.length;
     request.response.add(bytes);
     await request.response.close();
+    onExportDownloaded?.call();
   }
 
   Future<void> _handleUpload(HttpRequest request) async {

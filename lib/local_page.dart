@@ -10,7 +10,9 @@ import 'package:flutter/material.dart';
 
 /// 移动端本地文件传输配置页，负责组合控制器、视图和文件操作。
 class LocalPage extends StatefulWidget {
-  const LocalPage({super.key});
+  final HomePageController? controller;
+
+  const LocalPage({super.key, this.controller});
 
   @override
   State<LocalPage> createState() => _LocalPageState();
@@ -18,13 +20,15 @@ class LocalPage extends StatefulWidget {
 
 class _LocalPageState extends State<LocalPage> {
   late final HomePageController _controller;
+  late final bool _ownsController;
 
   @override
   void initState() {
     super.initState();
-    _controller = HomePageController();
+    _ownsController = widget.controller == null;
+    _controller = widget.controller ?? HomePageController();
     _controller.onConfirmReplace = _confirmReplace;
-    _controller.initialize();
+    if (_ownsController) _controller.initialize();
   }
 
   /// 新文件到达且本地已有文件时，确认是否替换旧文件。
@@ -128,10 +132,10 @@ class _LocalPageState extends State<LocalPage> {
     }
   }
 
-  /// 释放本地页控制器及文件服务。
+  /// 仅释放由本地页自行创建的控制器。
   @override
   void dispose() {
-    _controller.dispose();
+    if (_ownsController) _controller.dispose();
     super.dispose();
   }
 

@@ -1,34 +1,70 @@
+import 'package:excel_app/export_page.dart';
+import 'package:excel_app/home_page_controller.dart';
+import 'package:excel_app/home_page_view.dart';
 import 'package:excel_app/local_page.dart';
 import 'package:excel_app/online/online_page.dart';
-import 'package:excel_app/home_page_view.dart';
 import 'package:flutter/material.dart';
 
-/// 移动端大厅，负责连接在线和本地两个业务入口。
-class HomePage extends StatelessWidget {
+/// 移动端大厅，负责共享在线、本地和导出服务状态。
+class HomePage extends StatefulWidget {
   const HomePage({super.key});
 
-  /// 打开在线设备管理页面。
-  void _showOnlinePage(BuildContext context) {
+  @override
+  State<HomePage> createState() => _HomePageState();
+}
+
+class _HomePageState extends State<HomePage> {
+  late final HomePageController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = HomePageController();
+    _controller.initialize();
+  }
+
+  /// 打开在线设备列表，并共享二维码导出回调。
+  void _showOnlinePage() {
     Navigator.push<void>(
       context,
-      MaterialPageRoute(builder: (_) => const OnlinePage()),
+      MaterialPageRoute(
+        builder: (_) => OnlinePage(
+          onExportQrCodes: _controller.exportQrArchive,
+        ),
+      ),
     );
   }
 
   /// 打开本地文件传输配置页面。
-  void _showLocalPage(BuildContext context) {
+  void _showLocalPage() {
     Navigator.push<void>(
       context,
-      MaterialPageRoute(builder: (_) => const LocalPage()),
+      MaterialPageRoute(builder: (_) => LocalPage(controller: _controller)),
     );
   }
 
-  /// 构建大厅视图并连接两个导航回调。
+  /// 打开统一的电脑导出服务页面。
+  void _showExportPage() {
+    Navigator.push<void>(
+      context,
+      MaterialPageRoute(builder: (_) => ExportPage(controller: _controller)),
+    );
+  }
+
+  /// 释放首页拥有的共享文件服务控制器。
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  /// 构建大厅入口并转发导航操作。
   @override
   Widget build(BuildContext context) {
     return HomePageView(
-      onOnlinePage: () => _showOnlinePage(context),
-      onLocalPage: () => _showLocalPage(context),
+      onOnlinePage: _showOnlinePage,
+      onLocalPage: _showLocalPage,
+      onExportPage: _showExportPage,
     );
   }
 }

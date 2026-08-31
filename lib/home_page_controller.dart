@@ -14,6 +14,7 @@ class HomePageController extends ChangeNotifier {
   String? _localIp;
   String _status = '未启动';
   String? _receivedNotice;
+  String? _pendingExportFilename;
   bool _hasFiles = false;
   bool _disposed = false;
 
@@ -27,6 +28,7 @@ class HomePageController extends ChangeNotifier {
   bool get isRunning => _fileServer != null;
   bool get hasFiles => _hasFiles;
   String? get receivedNotice => _receivedNotice;
+  String? get pendingExportFilename => _pendingExportFilename;
 
   /// 返回当前保存目录中可以展示的文件。
   List<File> get receivedFiles {
@@ -39,8 +41,9 @@ class HomePageController extends ChangeNotifier {
         .toList();
   }
 
-  /// 初始化持久化目录并启动局域网文件服务。
+  /// 初始化持久化目录，文件服务由页面中的启动按钮显式开启。
   Future<void> initialize() async {
+    if (_saveDir != null || _disposed) return;
     try {
       final appDir = await getApplicationDocumentsDirectory();
       if (_disposed) return;
@@ -48,7 +51,6 @@ class HomePageController extends ChangeNotifier {
       _saveDir = Directory('${appDir.path}/received')
         ..createSync(recursive: true);
       refreshFiles();
-      await startServer();
     } catch (error) {
       _status = '启动失败: $error';
       _notifyListeners();
@@ -72,7 +74,11 @@ class HomePageController extends ChangeNotifier {
 
   /// 启动文件服务。
   Future<void> startServer() async {
-    if (_fileServer != null || _saveDir == null || _disposed) return;
+    if (_fileServer != null || _disposed) return;
+    if (_saveDir == null) {
+      await initialize();
+      if (_saveDir == null || _disposed) return;
+    }
 
     try {
       _localIp = await getLocalIp();
@@ -81,6 +87,7 @@ class HomePageController extends ChangeNotifier {
       final server = FileServer(port: port, saveDir: _saveDir!);
       server.onFilesReceived = _onFilesReceived;
       server.onReplaceExistingFiles = onConfirmReplace;
+      server.onExportDownloaded = _onExportDownloaded;
       _fileServer = server;
       _status = '运行中';
       _notifyListeners();
@@ -113,6 +120,8 @@ class HomePageController extends ChangeNotifier {
         '${now.second.toString().padLeft(2, '0')}';
     final filename = '${baseName}_edited_$timestamp$extension';
     server.queueExport(CsvExporter().export(table), filename);
+    _pendingExportFilename = filename;
+    _notifyListeners();
   }
 
   /// 将二维码 ZIP 排队，等待电脑端页面下载到默认目录。
@@ -126,12 +135,15 @@ class HomePageController extends ChangeNotifier {
       filename,
       contentType: 'application/zip',
     );
+    _pendingExportFilename = filename;
+    _notifyListeners();
   }
 
   /// 停止文件服务并更新首页状态。
   void stopServer() {
     _fileServer?.release();
     _fileServer = null;
+    _pendingExportFilename = null;
     _status = '已停止';
     _notifyListeners();
   }
@@ -150,12 +162,20 @@ class HomePageController extends ChangeNotifier {
     refreshFiles();
   }
 
+  /// 电脑下载已排队文件后清除导出页中的待下载状态。
+  void _onExportDownloaded() {
+    if (_disposed) return;
+    _pendingExportFilename = null;
+    _notifyListeners();
+  }
+
   /// 在控制器销毁时释放文件服务和监听资源。
   @override
   void dispose() {
     _disposed = true;
     _fileServer?.release();
     _fileServer = null;
+    _pendingExportFilename = null;
     super.dispose();
   }
 
