@@ -1,5 +1,6 @@
 // 入参：Context.argv = { type, device_no, data }
-// type: query(查询) / modify(修改) / add(新增) / delete(删除)，也支持中文写法
+// type: query(查询) / modify(修改) / add(新增) / delete(删除) / list(列表)
+//   list(列表)：返回表格所有数据行，可选 includeEmpty=true 保留全空行
 const argv = Context.argv || {}
 let type = String(argv.type || '').trim().toLowerCase()
 
@@ -7,12 +8,15 @@ const TYPE_MAP = {
   'query': 'query', '查询': 'query',
   'modify': 'modify', '修改': 'modify',
   'add': 'add', '新增': 'add',
-  'delete': 'delete', '删除': 'delete'
+  'delete': 'delete', '删除': 'delete',
+  'list': 'list', '列表': 'list', '全部': 'list', '所有': 'list'
 }
 type = TYPE_MAP[type] || type
 
 const deviceNo = String(argv.device_no == null ? '' : argv.device_no).trim()
 const data = (argv.data && typeof argv.data === 'object') ? argv.data : {}
+// list 额外参数：includeEmpty 是否包含全空行（默认 false，过滤）
+const includeEmpty = argv.includeEmpty === true
 
 const sheet = Application.ActiveSheet
 const used = sheet.UsedRange
@@ -59,14 +63,34 @@ function writeRow(rowNum, dataObj) {
   }
 }
 
-if (!['query', 'modify', 'add', 'delete'].includes(type)) {
-  return { success: false, message: 'type 必须是 query/modify/add/delete（或 查询/修改/新增/删除）' }
+if (!['query', 'modify', 'add', 'delete', 'list'].includes(type)) {
+  return { success: false, message: 'type 必须是 query/modify/add/delete/list（或 查询/修改/新增/删除/列表）' }
 }
 if (deviceCol < 0) {
   return { success: false, message: '未找到「设备编号」列' }
 }
 
 switch (type) {
+  // 0) 列表：返回所有数据行
+  case 'list': {
+    const rows = []
+    for (let i = 1; i < nRows; i++) {
+      const rowNum = startRow + i
+      const rowData = {}
+      let isEmpty = true
+      for (let j = 0; j < nCols; j++) {
+        const key = headers[j]
+        if (!key) continue
+        const val = sheet.Cells(rowNum, startCol + j).Text
+        rowData[key] = val
+        if (String(val).trim() !== '') isEmpty = false
+      }
+      if (isEmpty && !includeEmpty) continue
+      rows.push(rowData)
+    }
+    return { success: true, type: 'list', total: rows.length, rows: rows }
+  }
+
   case 'query': {
     if (deviceNo === '') return { success: false, message: '参数 device_no 不能为空' }
     const rowNum = findRow(deviceNo)
