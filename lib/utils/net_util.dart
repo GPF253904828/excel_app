@@ -5,8 +5,8 @@ import 'package:http/http.dart' as http;
 class DeviceApi {
   DeviceApi._(); // 工具类，禁止实例化
 
-  /// 统一调用脚本接口并解析脚本返回结果。
-  static Future<DeviceResult> _invoke(
+  /// 统一调用脚本接口并返回 AirScript 的业务结果对象。
+  static Future<Map<String, dynamic>> _invokeRaw(
     Map<String, dynamic> argv, {
     required String webhook,
     required String token,
@@ -37,7 +37,18 @@ class DeviceApi {
     // 脚本 return 的对象在 data.result
     final data = json['data'] as Map<String, dynamic>? ?? {};
     final result = (data['result'] as Map<String, dynamic>?) ?? {};
-    return DeviceResult.fromJson(result);
+    return result;
+  }
+
+  /// 统一调用脚本接口并解析单条设备操作结果。
+  static Future<DeviceResult> _invoke(
+    Map<String, dynamic> argv, {
+    required String webhook,
+    required String token,
+  }) async {
+    return DeviceResult.fromJson(
+      await _invokeRaw(argv, webhook: webhook, token: token),
+    );
   }
 
   /// 按设备编号查询并返回脚本中的完整行数据。
@@ -100,6 +111,20 @@ class DeviceApi {
       token: token,
     );
   }
+
+  /// 获取远端表格的全部设备行。
+  static Future<DeviceListResult> listDevices({
+    required String webhook,
+    required String token,
+  }) async {
+    return DeviceListResult.fromJson(
+      await _invokeRaw(
+        <String, dynamic>{'type': 'list'},
+        webhook: webhook,
+        token: token,
+      ),
+    );
+  }
 }
 
 /// 脚本返回结果的类型化封装
@@ -129,6 +154,31 @@ class DeviceResult {
       DeviceResult._(json);
 
   /// 失败原因（success=false 时通常有值）
+  String? get errorMessage => success ? null : (message ?? '未知错误');
+}
+
+/// 脚本 list 接口返回的完整设备行集合。
+class DeviceListResult {
+  final Map<String, dynamic> raw;
+  final bool success;
+  final String? type;
+  final String? message;
+  final List<Map<String, dynamic>> rows;
+
+  DeviceListResult._(this.raw)
+      : success = raw['success'] == true,
+        type = raw['type'] as String?,
+        message = raw['message'] as String?,
+        rows = <Map<String, dynamic>>[
+          for (final row in raw['rows'] as List<dynamic>? ?? const [])
+            if (row is Map) Map<String, dynamic>.from(row),
+        ];
+
+  /// 从脚本业务结果构建列表模型。
+  factory DeviceListResult.fromJson(Map<String, dynamic> json) =>
+      DeviceListResult._(json);
+
+  /// 返回业务失败时可直接展示的消息。
   String? get errorMessage => success ? null : (message ?? '未知错误');
 }
 

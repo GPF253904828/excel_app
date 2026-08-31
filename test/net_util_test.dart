@@ -52,4 +52,52 @@ void main() {
       },
     );
   });
+
+  test('sends list requests and parses all remote rows', () async {
+    final server = await HttpServer.bind(InternetAddress.loopbackIPv4, 0);
+    addTearDown(server.close);
+    Map<String, dynamic>? receivedBody;
+
+    final handledRequest = server.first.then((request) async {
+      receivedBody = jsonDecode(
+        await utf8.decoder.bind(request).join(),
+      ) as Map<String, dynamic>;
+      request.response
+        ..statusCode = HttpStatus.ok
+        ..headers.contentType = ContentType.json
+        ..write(
+          jsonEncode(<String, dynamic>{
+            'status': 'finished',
+            'data': <String, dynamic>{
+              'result': <String, dynamic>{
+                'success': true,
+                'type': 'list',
+                'total': 2,
+                'rows': <Map<String, String>>[
+                  <String, String>{'设备编号': 'P001', '设备名称': '设备A'},
+                  <String, String>{'设备编号': 'P002', '设备名称': '设备B'},
+                ],
+              },
+            },
+          }),
+        );
+      await request.response.close();
+    });
+
+    final result = await DeviceApi.listDevices(
+      webhook: 'http://${server.address.address}:${server.port}',
+      token: 'custom-token',
+    );
+    await handledRequest;
+
+    expect(
+      receivedBody?['Context'],
+      <String, dynamic>{
+        'argv': <String, dynamic>{'type': 'list'},
+      },
+    );
+    expect(result.success, isTrue);
+    expect(result.rows, hasLength(2));
+    expect(result.rows.first['设备编号'], 'P001');
+  });
 }
