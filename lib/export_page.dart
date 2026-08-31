@@ -21,6 +21,7 @@ class ExportPage extends StatelessWidget {
         isRunning: controller.isRunning,
         hasFiles: false,
         pendingExportFilename: controller.pendingExportFilename,
+        networkHint: '在电脑浏览器中打开上面的地址即可接收导出文件',
         showFileManagement: false,
         onStart: () => controller.startServer(),
         onStop: controller.stopServer,
