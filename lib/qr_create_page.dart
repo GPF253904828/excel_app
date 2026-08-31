@@ -85,7 +85,7 @@ class _QrCreatePageState extends State<QrCreatePage> {
     final service = widget.service;
     if (service != null) return service;
     final appDirectory = await getApplicationDocumentsDirectory();
-    return QrCodeService(Directory('${appDirectory.path}/A'));
+    return QrCodeService(Directory('${appDirectory.path}/二维码合计'));
   }
 
   /// 生成当前选中设备的二维码图片。
@@ -140,7 +140,7 @@ class _QrCreatePageState extends State<QrCreatePage> {
       final archive = await (await _getService()).zip(files);
       if (!mounted) return;
       setState(() => _status = '导出中');
-      await onExport(archive, 'A.zip');
+      await onExport(archive, '二维码合计.zip');
       if (!mounted) return;
       setState(() => _status = '导出已完成');
     } catch (error) {

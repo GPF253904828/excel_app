@@ -109,7 +109,7 @@ void main() {
     await tester.tap(find.text('导出'));
     await tester.pumpAndSettle();
     expect(find.text('导出已完成'), findsOneWidget);
-    expect(exportedName, 'A.zip');
+    expect(exportedName, '二维码合计.zip');
     expect(exportedBytes, isNotNull);
   });
 }
