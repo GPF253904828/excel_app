@@ -341,35 +341,83 @@ void main() {
   });
 }
 
-/// 验证在线接口配置可以保存并显示完整 URL。
+/// 验证在线接口配置列表的迁移、内置保护和选择流程。
 void _registerConfigTests() {
-  testWidgets('保存接口配置后显示 URL 并可再次读取', (tester) async {
-    await tester.pumpWidget(const MaterialApp(home: OnlineConfigPage()));
+  test('迁移旧配置并保护内置配置', () async {
+    SharedPreferences.setMockInitialValues(<String, Object>{
+      'online_api_url': 'https://legacy.example.com/sync',
+      'online_api_token': 'legacy-token',
+    });
+    const store = OnlineConfigStore();
 
-    await tester.enterText(
-      find.byKey(const Key('online-config-url')),
-      'https://example.com/scripts/device_sync_task',
+    final configs = await store.loadAll();
+    final builtIn = configs.singleWhere((config) => config.isBuiltIn);
+    final custom = configs.singleWhere((config) => !config.isBuiltIn);
+
+    expect(builtIn.url, OnlineApiConfig.builtInUrl);
+    expect(custom.url, 'https://legacy.example.com/sync');
+    expect((await store.load())?.id, custom.id);
+    await expectLater(store.delete(builtIn.id), throwsStateError);
+  });
+
+  test('自定义配置可以新增、修改和删除', () async {
+    const store = OnlineConfigStore();
+    final created = await store.create(
+      url: 'https://example.com/first',
+      token: 'first-token',
     );
-    await tester.enterText(
-      find.byKey(const Key('online-config-token')),
-      'token-123',
+    final updated = await store.update(
+      created.copyWith(url: 'https://example.com/updated'),
     );
-    await tester.tap(find.byKey(const Key('online-config-save')));
+
+    expect(updated.url, 'https://example.com/updated');
+    await store.delete(updated.id);
+    expect(
+      (await store.loadAll()).where((config) => config.id == updated.id),
+      isEmpty,
+    );
+  });
+
+  testWidgets('选择配置并确认后返回活动配置', (tester) async {
+    const store = OnlineConfigStore();
+    final custom = await store.create(
+      url: 'https://example.com/sync',
+      token: 'token-123',
+    );
+    OnlineApiConfig? returned;
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Builder(
+          builder: (context) => FilledButton(
+            onPressed: () {
+              Navigator.push<OnlineApiConfig>(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => const OnlineConfigPage(store: store),
+                ),
+              ).then((config) => returned = config);
+            },
+            child: const Text('打开配置'),
+          ),
+        ),
+      ),
+    );
+
+    await tester.tap(find.text('打开配置'));
+    await tester.pumpAndSettle();
+    expect(find.text('内置'), findsOneWidget);
+    expect(find.text('https://example.com/sync'), findsOneWidget);
+    expect(
+      find.byKey(const Key('online-config-edit-builtin')),
+      findsNothing,
+    );
+    await tester.tap(find.byKey(Key('online-config-select-${custom.id}')));
+    await tester.tap(find.byKey(const Key('online-config-confirm')));
     await tester.pumpAndSettle();
 
-    expect(
-      find.text('当前 URL: https://example.com/scripts/device_sync_task'),
-      findsOneWidget,
-    );
-    expect(
-      tester
-          .widget<TextField>(find.byKey(const Key('online-config-token')))
-          .obscureText,
-      isTrue,
-    );
-    final savedConfig = await const OnlineConfigStore().load();
-    expect(savedConfig?.url, 'https://example.com/scripts/device_sync_task');
-    expect(savedConfig?.token, 'token-123');
+    expect(returned?.id, custom.id);
+    expect((await store.load())?.id, custom.id);
   });
 }
 
