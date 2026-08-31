@@ -240,18 +240,85 @@ void main() {
     expect(find.text('P001'), findsOneWidget);
     expect(find.text('设备A'), findsOneWidget);
   });
+
+  testWidgets('uses remote row callbacks and replaces rows after editing',
+      (tester) async {
+    int? savedIndex;
+    List<String>? savedRow;
+    await tester.pumpWidget(_spreadsheetApp(
+      table: XlsTable(
+        headers: const ['设备编号', '设备名称'],
+        rows: const [
+          ['P001', '设备A']
+        ],
+      ),
+      onSaveRow: (rowIndex, row) async {
+        savedIndex = rowIndex;
+        savedRow = row;
+        return XlsTable(
+          headers: const ['设备编号', '设备名称'],
+          rows: const [
+            ['P001', '线上同步后的设备']
+          ],
+        );
+      },
+    ));
+
+    expect(find.byTooltip('保存'), findsNothing);
+    await tester.tap(find.text('设备A'));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byKey(const Key('field-设备名称')), '编辑后设备');
+    await tester.tap(find.text('保存'));
+    await tester.pumpAndSettle();
+
+    expect(savedIndex, 0);
+    expect(savedRow, ['P001', '编辑后设备']);
+    expect(find.text('线上同步后的设备'), findsOneWidget);
+  });
+
+  testWidgets('uses remote delete callback and replaces rows after deletion',
+      (tester) async {
+    int? deletedIndex;
+    await tester.pumpWidget(_spreadsheetApp(
+      table: XlsTable(
+        headers: const ['设备编号', '设备名称'],
+        rows: const [
+          ['P001', '设备A']
+        ],
+      ),
+      onDeleteRow: (rowIndex, row) async {
+        deletedIndex = rowIndex;
+        return XlsTable(
+          headers: const ['设备编号', '设备名称'],
+          rows: const [],
+        );
+      },
+    ));
+
+    await tester.longPress(find.text('设备A'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('删除'));
+    await tester.pumpAndSettle();
+
+    expect(deletedIndex, 0);
+    expect(find.text('暂无数据'), findsOneWidget);
+  });
 }
 
 /// 构造表格页面测试所需的最小应用壳。
 Widget _spreadsheetApp({
   required XlsTable table,
-  required Future<void> Function(XlsTable table) onSave,
+  Future<void> Function(XlsTable table)? onSave,
+  Future<XlsTable> Function(int? rowIndex, List<String> row)? onSaveRow,
+  Future<XlsTable> Function(int rowIndex, List<String> row)? onDeleteRow,
 }) {
   return MaterialApp(
     home: SpreadsheetPage(
       file: File('device_list.xls'),
       table: table,
       onSave: onSave,
+      onSaveRow: onSaveRow,
+      onDeleteRow: onDeleteRow,
     ),
   );
 }

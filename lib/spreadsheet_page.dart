@@ -11,6 +11,18 @@ import 'package:flutter/material.dart';
 const double _minColumnWidth = 72;
 const double _maxColumnWidth = 220;
 
+/// 在线表格新增或编辑一行后返回最新的完整表格。
+typedef SpreadsheetRowSaveCallback = Future<XlsTable> Function(
+  int? rowIndex,
+  List<String> row,
+);
+
+/// 在线表格删除一行后返回最新的完整表格。
+typedef SpreadsheetRowDeleteCallback = Future<XlsTable> Function(
+  int rowIndex,
+  List<String> row,
+);
+
 bool _isNormalStatus(String status) => status == '正常使用' || status == '正常';
 bool _isRepairStatus(String status) => status == '维修中' || status == '维修';
 
@@ -127,7 +139,9 @@ int findDeviceRowIndex(
 class SpreadsheetPage extends StatefulWidget {
   final File file;
   final XlsTable table;
-  final Future<void> Function(XlsTable table) onSave;
+  final Future<void> Function(XlsTable table)? onSave;
+  final SpreadsheetRowSaveCallback? onSaveRow;
+  final SpreadsheetRowDeleteCallback? onDeleteRow;
   final Future<void> Function(Uint8List bytes, String filename)?
       onExportQrCodes;
 
@@ -135,7 +149,9 @@ class SpreadsheetPage extends StatefulWidget {
     super.key,
     required this.file,
     required this.table,
-    required this.onSave,
+    this.onSave,
+    this.onSaveRow,
+    this.onDeleteRow,
     this.onExportQrCodes,
   });
 
@@ -144,22 +160,27 @@ class SpreadsheetPage extends StatefulWidget {
 }
 
 class _SpreadsheetPageState extends State<SpreadsheetPage> {
-  late final List<String> _headers;
-  late final List<List<String>> _rows;
+  late List<String> _headers;
+  late List<List<String>> _rows;
   late final ScrollController _horizontalController;
   bool _saving = false;
 
   @override
   void initState() {
     super.initState();
-    _headers = List<String>.from(widget.table.headers);
-    _rows = widget.table.rows
+    _applyTable(widget.table);
+    _horizontalController = ScrollController();
+  }
+
+  /// 将表格数据复制为页面拥有的可编辑列表。
+  void _applyTable(XlsTable table) {
+    _headers = List<String>.from(table.headers);
+    _rows = table.rows
         .map((row) => List<String>.generate(
               _headers.length,
               (index) => index < row.length ? row[index] : '',
             ))
         .toList();
-    _horizontalController = ScrollController();
   }
 
   @override
@@ -222,6 +243,15 @@ class _SpreadsheetPageState extends State<SpreadsheetPage> {
   /// 将编辑结果替换或追加到当前列表，等待列表页保存按钮上传。
   Future<void> _saveRow(int? rowIndex, List<String> row) async {
     final normalizedRow = _rowForEditor(row);
+    final onSaveRow = widget.onSaveRow;
+    if (onSaveRow != null) {
+      final synchronizedTable = await onSaveRow(rowIndex, normalizedRow);
+      if (!mounted) return;
+      setState(() => _applyTable(synchronizedTable));
+      ToastUtil.showCenter('已同步线上列表');
+      return;
+    }
+
     final candidateRows = _rows.map(List<String>.from).toList();
     if (rowIndex == null) {
       candidateRows.add(normalizedRow);
@@ -260,6 +290,19 @@ class _SpreadsheetPageState extends State<SpreadsheetPage> {
     );
 
     if (shouldDelete != true || !mounted) return;
+    final onDeleteRow = widget.onDeleteRow;
+    if (onDeleteRow != null) {
+      try {
+        final synchronizedTable =
+            await onDeleteRow(rowIndex, List<String>.from(_rows[rowIndex]));
+        if (!mounted) return;
+        setState(() => _applyTable(synchronizedTable));
+        ToastUtil.showCenter('已同步线上列表');
+      } catch (error) {
+        if (mounted) ToastUtil.showCenter('删除失败: $error');
+      }
+      return;
+    }
     setState(() {
       _rows.removeAt(rowIndex);
     });
@@ -267,7 +310,8 @@ class _SpreadsheetPageState extends State<SpreadsheetPage> {
 
   /// 二次确认后把当前编辑结果发送到电脑页面。
   Future<void> _save() async {
-    if (_saving) return;
+    final onSave = widget.onSave;
+    if (_saving || onSave == null) return;
 
     final shouldSave = await showDialog<bool>(
       context: context,
@@ -292,7 +336,7 @@ class _SpreadsheetPageState extends State<SpreadsheetPage> {
     if (shouldSave != true || !mounted) return;
     setState(() => _saving = true);
     try {
-      await widget.onSave(XlsTable(
+      await onSave(XlsTable(
         headers: List<String>.from(_headers),
         rows: _rows.map(List<String>.from).toList(),
       ));
@@ -386,18 +430,19 @@ class _SpreadsheetPageState extends State<SpreadsheetPage> {
               child: const Icon(Icons.document_scanner_outlined),
             ),
             const SizedBox(height: 12),
-            FloatingActionButton.small(
-              heroTag: 'save-table',
-              tooltip: '保存',
-              onPressed: _saving ? null : _save,
-              child: _saving
-                  ? const SizedBox(
-                      width: 18,
-                      height: 18,
-                      child: CircularProgressIndicator(strokeWidth: 2),
-                    )
-                  : const Icon(Icons.save_outlined),
-            ),
+            if (widget.onSave != null && widget.onSaveRow == null)
+              FloatingActionButton.small(
+                heroTag: 'save-table',
+                tooltip: '保存',
+                onPressed: _saving ? null : _save,
+                child: _saving
+                    ? const SizedBox(
+                        width: 18,
+                        height: 18,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Icon(Icons.save_outlined),
+              ),
           ],
         ),
       ),
