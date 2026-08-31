@@ -2,10 +2,11 @@
 set -euo pipefail
 
 PROJECT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-FIR_API_TOKEN="588cdfd5f45635e3338b79d5b66f50bf"
-FIR_BUNDLE_ID="com.example.excel_app"
+FIR_API_TOKEN="${FIR_API_TOKEN:-588cdfd5f45635e3338b79d5b66f50bf}"
+FIR_BUNDLE_ID="${FIR_BUNDLE_ID:-com.example.excel_app}"
 FIR_API_URL="${FIR_API_URL:-http://api.appmeta.cn/apps}"
 APK_PATH="${PROJECT_ROOT}/build/app/outputs/flutter-apk/app-release.apk"
+ICON_PATH="${FIR_ICON_PATH:-${PROJECT_ROOT}/assets/branding/acbio_icon_1024.png}"
 
 if [[ -z "${FIR_API_TOKEN}" || "${FIR_API_TOKEN}" == "YOUR_FIR_API_TOKEN" ]]; then
   echo "请设置 FIR_API_TOKEN 后再上传 fir.im。" >&2
@@ -32,6 +33,11 @@ command -v python3 >/dev/null 2>&1 || {
   echo "未找到 python3 命令，用于解析上传凭证。" >&2
   exit 1
 }
+
+if [[ ! -f "${ICON_PATH}" ]]; then
+  echo "未找到应用图标: ${ICON_PATH}" >&2
+  exit 1
+fi
 
 cd "${PROJECT_ROOT}"
 flutter build apk --release
@@ -72,11 +78,28 @@ CREDENTIAL_FIELDS="$(CREDENTIALS="${CREDENTIALS}" python3 - <<'PY'
 import json
 import os
 
-binary = json.loads(os.environ['CREDENTIALS'])['cert']['binary']
-print('\t'.join(binary[key] for key in ('upload_url', 'key', 'token')))
+cert = json.loads(os.environ['CREDENTIALS'])['cert']
+icon = cert['icon']
+binary = cert['binary']
+print('\t'.join(
+    icon[key] for key in ('upload_url', 'key', 'token')
+) + '\t' + '\t'.join(
+    binary[key] for key in ('upload_url', 'key', 'token')
+))
 PY
 )"
-IFS=$'\t' read -r UPLOAD_URL UPLOAD_KEY UPLOAD_TOKEN <<< "${CREDENTIAL_FIELDS}"
+IFS=$'\t' read -r ICON_UPLOAD_URL ICON_UPLOAD_KEY ICON_UPLOAD_TOKEN \
+  UPLOAD_URL UPLOAD_KEY UPLOAD_TOKEN <<< "${CREDENTIAL_FIELDS}"
+
+if ! curl --fail --silent --show-error \
+  --request POST \
+  --form "key=${ICON_UPLOAD_KEY}" \
+  --form "token=${ICON_UPLOAD_TOKEN}" \
+  --form "file=@${ICON_PATH}" \
+  "${ICON_UPLOAD_URL}" >/dev/null; then
+  echo "上传应用图标失败，请检查 cert.icon 上传凭证和网络连接。" >&2
+  exit 1
+fi
 
 if ! UPLOAD_RESPONSE="$(curl --fail --silent --show-error \
   --request POST \
@@ -88,7 +111,7 @@ if ! UPLOAD_RESPONSE="$(curl --fail --silent --show-error \
   --form "x:build=${FIR_BUILD}" \
   --form "x:changelog=${FIR_CHANGELOG:-$(git log -1 --pretty=%s)}" \
   "${UPLOAD_URL}")"; then
-  echo "上传 APK 失败，请检查上传凭证和网络连接。" >&2
+  echo "上传 APK 失败，请检查 cert.binary 上传凭证和网络连接。" >&2
   exit 1
 fi
 

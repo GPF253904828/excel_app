@@ -19,6 +19,8 @@ mkdir -p "${PROJECT_ROOT}/scripts" "${FAKE_BIN}"
 cp "${SOURCE_SCRIPT}" "${PROJECT_ROOT}/scripts/build_and_upload_fir.sh"
 chmod +x "${PROJECT_ROOT}/scripts/build_and_upload_fir.sh"
 printf '%s\n' 'version: 1.2.3+4' > "${PROJECT_ROOT}/pubspec.yaml"
+mkdir -p "${PROJECT_ROOT}/assets/branding"
+: > "${PROJECT_ROOT}/assets/branding/acbio_icon_1024.png"
 
 printf '%s\n' '#!/usr/bin/env bash' \
   'set -euo pipefail' \
@@ -34,8 +36,10 @@ printf '%s\n' '#!/usr/bin/env bash' \
   'printf "\n" >> "${FIR_TEST_CURL_LOG}"' \
   'call_count="$(wc -l < "${FIR_TEST_CURL_LOG}" | tr -d " ")"' \
   'if [[ "${call_count}" == "1" ]]; then' \
-  '  printf "%s" "{\"cert\":{\"binary\":{\"upload_url\":\"https://upload.example\",\"key\":\"binary-key\",\"token\":\"binary-token\"}}}"' \
+  '  printf "%s" "{\"cert\":{\"icon\":{\"upload_url\":\"https://upload.example\",\"key\":\"icon-key\",\"token\":\"icon-token\"},\"binary\":{\"upload_url\":\"https://upload.example\",\"key\":\"binary-key\",\"token\":\"binary-token\"}}}"' \
   'elif [[ "${call_count}" == "2" ]]; then' \
+  '  printf "%s" "{\"key\":\"icon-key\"}"' \
+  'elif [[ "${call_count}" == "3" ]]; then' \
   '  printf "%s" "{\"is_completed\":true}"' \
   'else' \
   '  exit 92' \
@@ -44,7 +48,8 @@ printf '%s\n' '#!/usr/bin/env bash' \
 chmod +x "${FAKE_BIN}/curl"
 
 if output="$(
-  env -u FIR_API_TOKEN -u FIR_BUNDLE_ID \
+  FIR_API_TOKEN='YOUR_FIR_API_TOKEN' \
+    FIR_BUNDLE_ID='YOUR_ANDROID_BUNDLE_ID' \
     PATH="${FAKE_BIN}:${PATH}" \
     FIR_TEST_CURL_LOG="${CALL_LOG}" \
     bash "${PROJECT_ROOT}/scripts/build_and_upload_fir.sh" 2>&1
@@ -70,8 +75,8 @@ FIR_TEST_CURL_LOG="${CALL_LOG}" \
   FIR_CHANGELOG='test changelog' \
   bash "${PROJECT_ROOT}/scripts/build_and_upload_fir.sh"
 
-if [[ "$(wc -l < "${CALL_LOG}" | tr -d " ")" != "2" ]]; then
-  echo "上传流程必须调用两次 curl。" >&2
+if [[ "$(wc -l < "${CALL_LOG}" | tr -d " ")" != "3" ]]; then
+  echo "上传流程必须依次获取凭证、上传图标和上传 APK。" >&2
   exit 1
 fi
 
@@ -82,13 +87,24 @@ if ! rg -q -- '--request POST' "${CALL_LOG}" ||
   exit 1
 fi
 
-if ! rg -q -- '--form key=binary-key' "${CALL_LOG}" ||
-  ! rg -q -- '--form token=binary-token' "${CALL_LOG}" ||
-  ! rg -q 'file=@.*/app-release\.apk' "${CALL_LOG}" ||
-  ! rg -q -- '--form x:version=1.2.3' "${CALL_LOG}" ||
-  ! rg -q -- '--form x:build=4' "${CALL_LOG}"; then
-  echo "第二步未按 cert.binary 上传 APK。" >&2
+ICON_CALL="$(awk 'NR == 2' "${CALL_LOG}")"
+BINARY_CALL="$(awk 'NR == 3' "${CALL_LOG}")"
+
+if ! printf '%s\n' "${ICON_CALL}" | rg -q -- '--form key=icon-key' ||
+  ! printf '%s\n' "${ICON_CALL}" | rg -q -- '--form token=icon-token' ||
+  ! printf '%s\n' "${ICON_CALL}" | rg -q 'file=@.*/acbio_icon_1024\.png' ||
+  printf '%s\n' "${ICON_CALL}" | rg -q 'x:name'; then
+  echo "第二步未按 cert.icon 上传图标。" >&2
   exit 1
 fi
 
-echo "fir.im 两步上传流程校验通过。"
+if ! printf '%s\n' "${BINARY_CALL}" | rg -q -- '--form key=binary-key' ||
+  ! printf '%s\n' "${BINARY_CALL}" | rg -q -- '--form token=binary-token' ||
+  ! printf '%s\n' "${BINARY_CALL}" | rg -q 'file=@.*/app-release\.apk' ||
+  ! printf '%s\n' "${BINARY_CALL}" | rg -q -- '--form x:version=1.2.3' ||
+  ! printf '%s\n' "${BINARY_CALL}" | rg -q -- '--form x:build=4'; then
+  echo "第三步未按 cert.binary 上传 APK。" >&2
+  exit 1
+fi
+
+echo "fir.im 凭证、图标和 APK 上传流程校验通过。"
