@@ -144,6 +144,7 @@ class SpreadsheetPage extends StatefulWidget {
   final SpreadsheetRowDeleteCallback? onDeleteRow;
   final String? title;
   final List<Widget> appBarActions;
+  final QrExportPageBuilder? qrExportPageBuilder;
   final Future<void> Function(Uint8List bytes, String filename)?
       onExportQrCodes;
 
@@ -156,6 +157,7 @@ class SpreadsheetPage extends StatefulWidget {
     this.onDeleteRow,
     this.title,
     this.appBarActions = const <Widget>[],
+    this.qrExportPageBuilder,
     this.onExportQrCodes,
   });
 
@@ -371,6 +373,7 @@ class _SpreadsheetPageState extends State<SpreadsheetPage> {
         builder: (_) => QrCreatePage(
           headers: List<String>.from(_headers),
           rows: _rows.map(List<String>.from).toList(),
+          exportPageBuilder: widget.qrExportPageBuilder,
           onExport: widget.onExportQrCodes,
         ),
       ),

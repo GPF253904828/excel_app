@@ -1,3 +1,5 @@
+import 'dart:typed_data';
+
 import 'package:excel_app/export_page.dart';
 import 'package:excel_app/home_page_controller.dart';
 import 'package:excel_app/local_page_view.dart';
@@ -11,10 +13,16 @@ void main() {
     addTearDown(controller.dispose);
 
     await tester.pumpWidget(
-      MaterialApp(home: ExportPage(controller: controller)),
+      MaterialApp(
+        home: ExportPage(
+          controller: controller,
+          archive: Uint8List.fromList(<int>[0x50, 0x4B]),
+          filename: '二维码合计.zip',
+        ),
+      ),
     );
 
-    expect(find.text('导出'), findsOneWidget);
+    expect(find.byKey(const Key('export-qr-archive')), findsOneWidget);
     expect(find.text('状态: 未启动'), findsOneWidget);
     expect(find.text('启动服务'), findsOneWidget);
   });

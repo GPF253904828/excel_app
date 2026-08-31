@@ -12,6 +12,7 @@ class LocalPageView extends StatelessWidget {
   final String? pendingExportFilename;
   final String networkHint;
   final bool showFileManagement;
+  final Widget? extraAction;
   final VoidCallback? onDeleteFiles;
   final VoidCallback onStart;
   final VoidCallback onStop;
@@ -32,6 +33,7 @@ class LocalPageView extends StatelessWidget {
     this.pendingExportFilename,
     this.networkHint = '在电脑浏览器中打开上面的地址即可上传文件',
     this.showFileManagement = true,
+    this.extraAction,
     this.onDeleteFiles,
   });
 
@@ -155,6 +157,10 @@ class LocalPageView extends StatelessWidget {
                 fontWeight: FontWeight.w600,
               ),
             ),
+          ],
+          if (extraAction != null) ...[
+            const SizedBox(height: 16),
+            extraAction!,
           ],
           const SizedBox(height: 24),
         ],

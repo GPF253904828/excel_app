@@ -112,4 +112,29 @@ void main() {
     expect(exportedName, '二维码合计.zip');
     expect(exportedBytes, isNotNull);
   });
+
+  testWidgets('opens a secondary export page after generating QR files',
+      (tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: QrCreatePage(
+          headers: const ['设备编号', '设备名称'],
+          rows: const [
+            ['P001', '设备A']
+          ],
+          service: _FakeQrCodeService(),
+          exportPageBuilder: (_, filename) => Scaffold(
+            body: Center(child: Text(filename)),
+          ),
+        ),
+      ),
+    );
+
+    await tester.tap(find.text('生成'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('导出'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('二维码合计.zip'), findsOneWidget);
+  });
 }

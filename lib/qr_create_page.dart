@@ -5,12 +5,19 @@ import 'package:excel_app/qr_code_service.dart';
 import 'package:flutter/material.dart';
 import 'package:path_provider/path_provider.dart';
 
+/// 使用已生成的二维码 ZIP 构建二级导出页面。
+typedef QrExportPageBuilder = Widget Function(
+  Uint8List archive,
+  String filename,
+);
+
 /// 提供设备二维码的选择、生成和导出操作。
 class QrCreatePage extends StatefulWidget {
   final List<String> headers;
   final List<List<String>> rows;
   final QrCodeService? service;
   final Future<void> Function(Uint8List bytes, String filename)? onExport;
+  final QrExportPageBuilder? exportPageBuilder;
 
   const QrCreatePage({
     super.key,
@@ -18,6 +25,7 @@ class QrCreatePage extends StatefulWidget {
     required this.rows,
     this.service,
     this.onExport,
+    this.exportPageBuilder,
   });
 
   @override
@@ -126,8 +134,9 @@ class _QrCreatePageState extends State<QrCreatePage> {
       setState(() => _status = '请先生成二维码');
       return;
     }
+    final pageBuilder = widget.exportPageBuilder;
     final onExport = widget.onExport;
-    if (onExport == null) {
+    if (pageBuilder == null && onExport == null) {
       setState(() => _status = '失败: 电脑导出服务未配置');
       return;
     }
@@ -139,8 +148,19 @@ class _QrCreatePageState extends State<QrCreatePage> {
     try {
       final archive = await (await _getService()).zip(files);
       if (!mounted) return;
+      if (pageBuilder != null) {
+        setState(() => _status = '正在打开导出页面');
+        await Navigator.push<void>(
+          context,
+          MaterialPageRoute(
+            builder: (_) => pageBuilder(archive, '二维码合计.zip'),
+          ),
+        );
+        if (mounted) setState(() => _status = '已返回二维码列表');
+        return;
+      }
       setState(() => _status = '导出中');
-      await onExport(archive, '二维码合计.zip');
+      await onExport!(archive, '二维码合计.zip');
       if (!mounted) return;
       setState(() => _status = '导出已完成');
     } catch (error) {
