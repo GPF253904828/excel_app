@@ -4,13 +4,11 @@ import 'package:flutter/material.dart';
 class HomePageView extends StatelessWidget {
   final VoidCallback onOnlinePage;
   final VoidCallback onLocalPage;
-  final VoidCallback onExportPage;
 
   const HomePageView({
     super.key,
     required this.onOnlinePage,
     required this.onLocalPage,
-    required this.onExportPage,
   });
 
   /// 构建大厅布局和两个业务入口。
@@ -41,16 +39,6 @@ class HomePageView extends StatelessWidget {
                   onPressed: onLocalPage,
                   icon: const Icon(Icons.folder_outlined),
                   label: const Text('本地'),
-                ),
-              ),
-              const SizedBox(height: 20),
-              SizedBox(
-                width: 240,
-                height: 64,
-                child: OutlinedButton.icon(
-                  onPressed: onExportPage,
-                  icon: const Icon(Icons.file_upload_outlined),
-                  label: const Text('导出'),
                 ),
               ),
             ],

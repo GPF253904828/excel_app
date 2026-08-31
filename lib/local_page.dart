@@ -1,5 +1,6 @@
 import 'dart:io';
 
+import 'package:excel_app/export_page.dart';
 import 'package:excel_app/home_page_controller.dart';
 import 'package:excel_app/local_page_view.dart';
 import 'package:excel_app/network_tools/xls_reader.dart';
@@ -121,8 +122,11 @@ class _LocalPageState extends State<LocalPage> {
             table: table,
             onSave: (editedTable) =>
                 _controller.exportEditedFile(file, editedTable),
-            onExportQrCodes: (bytes, filename) =>
-                _controller.exportQrArchive(bytes, filename),
+            qrExportPageBuilder: (archive, filename) => ExportPage(
+              controller: _controller,
+              archive: archive,
+              filename: filename,
+            ),
           ),
         ),
       );

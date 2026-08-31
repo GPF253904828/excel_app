@@ -5,7 +5,7 @@ import 'package:excel_app/local_page.dart';
 import 'package:excel_app/online/online_page.dart';
 import 'package:flutter/material.dart';
 
-/// 移动端大厅，负责共享在线、本地和导出服务状态。
+/// 移动端大厅，负责共享在线和本地二维码导出服务状态。
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
 
@@ -23,13 +23,17 @@ class _HomePageState extends State<HomePage> {
     _controller.initialize();
   }
 
-  /// 打开在线设备列表，并共享二维码导出回调。
+  /// 打开在线设备列表，并共享二维码导出页面构造器。
   void _showOnlinePage() {
     Navigator.push<void>(
       context,
       MaterialPageRoute(
         builder: (_) => OnlinePage(
-          onExportQrCodes: _controller.exportQrArchive,
+          qrExportPageBuilder: (archive, filename) => ExportPage(
+            controller: _controller,
+            archive: archive,
+            filename: filename,
+          ),
         ),
       ),
     );
@@ -40,14 +44,6 @@ class _HomePageState extends State<HomePage> {
     Navigator.push<void>(
       context,
       MaterialPageRoute(builder: (_) => LocalPage(controller: _controller)),
-    );
-  }
-
-  /// 打开统一的电脑导出服务页面。
-  void _showExportPage() {
-    Navigator.push<void>(
-      context,
-      MaterialPageRoute(builder: (_) => ExportPage(controller: _controller)),
     );
   }
 
@@ -64,7 +60,6 @@ class _HomePageState extends State<HomePage> {
     return HomePageView(
       onOnlinePage: _showOnlinePage,
       onLocalPage: _showLocalPage,
-      onExportPage: _showExportPage,
     );
   }
 }

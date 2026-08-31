@@ -4,6 +4,7 @@ import 'dart:typed_data';
 import 'package:excel_app/network_tools/xls_reader.dart';
 import 'package:excel_app/online/online_config_page.dart';
 import 'package:excel_app/online/online_config_store.dart';
+import 'package:excel_app/qr_create_page.dart';
 import 'package:excel_app/spreadsheet_page.dart';
 import 'package:excel_app/utils/net_util.dart';
 import 'package:excel_app/utils/toast_util.dart';
@@ -62,8 +63,7 @@ class OnlinePage extends StatefulWidget {
   final DeviceModifyCallback? onModify;
   final DeviceAddCallback? onAdd;
   final DeviceDeleteCallback? onDelete;
-  final Future<void> Function(Uint8List bytes, String filename)?
-      onExportQrCodes;
+  final QrExportPageBuilder? qrExportPageBuilder;
   final OnlineConfigStore configStore;
 
   const OnlinePage({
@@ -72,7 +72,7 @@ class OnlinePage extends StatefulWidget {
     this.onModify,
     this.onAdd,
     this.onDelete,
-    this.onExportQrCodes,
+    this.qrExportPageBuilder,
     this.configStore = const OnlineConfigStore(),
   });
 
@@ -305,7 +305,7 @@ class _OnlinePageState extends State<OnlinePage> {
       appBarActions: _tableActions(),
       onSaveRow: _saveRemoteRow,
       onDeleteRow: _deleteRemoteRow,
-      onExportQrCodes: widget.onExportQrCodes,
+      qrExportPageBuilder: widget.qrExportPageBuilder,
     );
   }
 }
