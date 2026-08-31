@@ -2,8 +2,8 @@
 set -euo pipefail
 
 PROJECT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-FIR_API_TOKEN="${FIR_API_TOKEN:-YOUR_FIR_API_TOKEN}"
-FIR_BUNDLE_ID="${FIR_BUNDLE_ID:-YOUR_ANDROID_BUNDLE_ID}"
+FIR_API_TOKEN="588cdfd5f45635e3338b79d5b66f50bf"
+FIR_BUNDLE_ID="com.example.excel_app"
 FIR_API_URL="${FIR_API_URL:-http://api.appmeta.cn/apps}"
 APK_PATH="${PROJECT_ROOT}/build/app/outputs/flutter-apk/app-release.apk"
 
