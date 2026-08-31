@@ -7,11 +7,15 @@ FIR_BUNDLE_ID="${FIR_BUNDLE_ID:-YOUR_ANDROID_BUNDLE_ID}"
 FIR_API_URL="${FIR_API_URL:-http://api.appmeta.cn/apps}"
 APK_PATH="${PROJECT_ROOT}/build/app/outputs/flutter-apk/app-release.apk"
 
-if [[ "${FIR_API_TOKEN}" == "YOUR_FIR_API_TOKEN" ]]; then
+if [[ -z "${FIR_API_TOKEN}" || "${FIR_API_TOKEN}" == "YOUR_FIR_API_TOKEN" ]]; then
   echo "请设置 FIR_API_TOKEN 后再上传 fir.im。" >&2
   exit 1
 fi
-if [[ "${FIR_BUNDLE_ID}" == "YOUR_ANDROID_BUNDLE_ID" ]]; then
+if [[ "${#FIR_API_TOKEN}" -ne 32 ]]; then
+  echo "FIR_API_TOKEN 必须是 fir.im 提供的 32 位令牌。" >&2
+  exit 1
+fi
+if [[ -z "${FIR_BUNDLE_ID}" || "${FIR_BUNDLE_ID}" == "YOUR_ANDROID_BUNDLE_ID" ]]; then
   echo "请设置 FIR_BUNDLE_ID 后再上传 fir.im。" >&2
   exit 1
 fi
@@ -56,10 +60,13 @@ print(json.dumps({
 PY
 )"
 
-CREDENTIALS="$(curl --fail --silent --show-error \
+if ! CREDENTIALS="$(curl --fail --silent --show-error \
   --request POST "${FIR_API_URL}" \
   --header "Content-Type: application/json" \
-  --data "${REQUEST_BODY}")"
+  --data "${REQUEST_BODY}")"; then
+  echo "获取上传凭证失败，请检查 FIR_API_TOKEN 和 FIR_BUNDLE_ID。" >&2
+  exit 1
+fi
 
 CREDENTIAL_FIELDS="$(CREDENTIALS="${CREDENTIALS}" python3 - <<'PY'
 import json
@@ -71,7 +78,8 @@ PY
 )"
 IFS=$'\t' read -r UPLOAD_URL UPLOAD_KEY UPLOAD_TOKEN <<< "${CREDENTIAL_FIELDS}"
 
-UPLOAD_RESPONSE="$(curl --fail --silent --show-error \
+if ! UPLOAD_RESPONSE="$(curl --fail --silent --show-error \
+  --request POST \
   --form "key=${UPLOAD_KEY}" \
   --form "token=${UPLOAD_TOKEN}" \
   --form "file=@${APK_PATH}" \
@@ -79,7 +87,10 @@ UPLOAD_RESPONSE="$(curl --fail --silent --show-error \
   --form "x:version=${FIR_VERSION}" \
   --form "x:build=${FIR_BUILD}" \
   --form "x:changelog=${FIR_CHANGELOG:-$(git log -1 --pretty=%s)}" \
-  "${UPLOAD_URL}")"
+  "${UPLOAD_URL}")"; then
+  echo "上传 APK 失败，请检查上传凭证和网络连接。" >&2
+  exit 1
+fi
 
 if ! UPLOAD_RESPONSE="${UPLOAD_RESPONSE}" python3 - <<'PY'
 import json
