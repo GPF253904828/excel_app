@@ -1,6 +1,17 @@
 import 'package:excel_app/online/online_config_store.dart';
 import 'package:flutter/material.dart';
 
+/// 在弹窗路由完全移除后释放其文本控制器，避免关闭动画继续访问已释放对象。
+Future<void> disposeConfigDialogControllersAfterRouteClosed<T>(
+  Future<T> completed,
+  Iterable<TextEditingController> controllers,
+) async {
+  await completed;
+  for (final controller in controllers) {
+    controller.dispose();
+  }
+}
+
 /// 管理在线脚本接口的内置和自定义连接配置。
 class OnlineConfigPage extends StatefulWidget {
   final OnlineConfigStore store;
@@ -82,7 +93,7 @@ class _OnlineConfigPageState extends State<OnlineConfigPage> {
     final tokenController = TextEditingController(text: config?.token ?? '');
     String? error;
     var saving = false;
-    final saved = await showDialog<bool>(
+    final route = DialogRoute<bool>(
       context: context,
       builder: (dialogContext) => StatefulBuilder(
         builder: (dialogContext, setDialogState) => AlertDialog(
@@ -151,8 +162,11 @@ class _OnlineConfigPageState extends State<OnlineConfigPage> {
         ),
       ),
     );
-    urlController.dispose();
-    tokenController.dispose();
+    final saved = await Navigator.of(context).push<bool>(route);
+    await disposeConfigDialogControllersAfterRouteClosed(
+      route.completed,
+      <TextEditingController>[urlController, tokenController],
+    );
     if (saved == true && mounted) await _load();
   }
 

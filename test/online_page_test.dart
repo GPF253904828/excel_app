@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:excel_app/device_edit_page.dart';
 import 'package:excel_app/online/online_config_page.dart';
 import 'package:excel_app/online/online_config_store.dart';
@@ -251,6 +253,40 @@ void _registerConfigTests() {
     expect(find.byKey(const Key('online-config-add')), findsOneWidget);
     expect(find.byType(FloatingActionButton), findsNothing);
     expect(find.byKey(const Key('online-config-confirm')), findsOneWidget);
+  });
+
+  testWidgets('聚焦 Token 后取消新增配置不会使用已释放控制器', (tester) async {
+    await tester.pumpWidget(const MaterialApp(home: OnlineConfigPage()));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const Key('online-config-add')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('online-config-token')));
+    await tester.pump();
+    await tester.tap(find.text('取消'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 250));
+
+    expect(tester.takeException(), isNull);
+  });
+
+  test('配置弹窗控制器在路由移除后才释放', () async {
+    final completed = Completer<void>();
+    final controller = TextEditingController();
+
+    final disposing = disposeConfigDialogControllersAfterRouteClosed(
+      completed.future,
+      <TextEditingController>[controller],
+    );
+    controller.text = '路由关闭前仍可编辑';
+    expect(controller.text, '路由关闭前仍可编辑');
+
+    completed.complete();
+    await disposing;
+    expect(
+      () => controller.addListener(() {}),
+      throwsA(isA<FlutterError>()),
+    );
   });
 }
 
