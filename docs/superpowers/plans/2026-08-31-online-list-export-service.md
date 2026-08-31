@@ -2,9 +2,9 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** 在线页进入即展示 AirScript 全量设备列表，远程增删改后重新同步；二维码通过统一导出服务以真实名称下载到电脑。
+**Goal:** 在线页进入即展示 AirScript 全量设备列表，远程增删改与配置切换后重新同步；二维码通过统一导出服务以真实名称下载到电脑。
 
-**Architecture:** `DeviceApi` 扩展 `list` 的请求与结果类型。`SpreadsheetPage` 保持本地 XLS 的延迟导出行为，同时增加返回完整同步表格的远程行操作回调供在线页复用。首页管理唯一的 `HomePageController`，在线页、本地页和导出页共享该控制器，避免导出服务状态分裂。
+**Architecture:** `OnlineConfigStore` 保存可选配置列表、选中项和旧格式迁移，内置配置固定为只读。`DeviceApi` 扩展 `list` 的请求与结果类型。`SpreadsheetPage` 保持本地 XLS 的延迟导出行为，同时增加返回完整同步表格的远程行操作回调供在线页复用。首页管理唯一的 `HomePageController`，在线页、本地页和导出页共享该控制器，避免导出服务状态分裂。
 
 **Tech Stack:** Flutter Material 3、Dart `http`、现有 `FileServer`、`qr_flutter`、Flutter widget/unit tests。
 
@@ -13,6 +13,7 @@
 ## 文件结构
 
 - 修改 `lib/utils/net_util.dart`：新增列表结果模型和 `DeviceApi.listDevices`。
+- 修改 `lib/online/online_config_store.dart`、`lib/online/online_config_page.dart`：实现内置与自定义配置列表、迁移、选择和编辑。
 - 修改 `lib/spreadsheet_page.dart`：为远程行保存/删除增加可选回调，不改变本地 XLS 对外接口。
 - 修改 `lib/online/online_page.dart`：加载远程列表并将行操作委托给 API，成功后重新拉取。
 - 修改 `lib/home_page.dart`、`lib/home_page_view.dart`、`lib/local_page.dart`：创建共享控制器并增加导出入口。
@@ -21,7 +22,135 @@
 - 修改 `lib/qr_create_page.dart`：默认目录和 ZIP 文件名改为 `二维码合计`。
 - 修改 `test/net_util_test.dart`、`test/online_page_test.dart`、`test/spreadsheet_page_test.dart`、`test/qr_create_page_test.dart`，创建 `test/export_page_test.dart`。
 
-### Task 1: 列表接口模型
+### Task 1: 在线配置列表与内置保护
+
+**Files:**
+- Modify: `test/online_page_test.dart`
+- Modify: `lib/online/online_config_store.dart`
+- Modify: `lib/online/online_config_page.dart`
+- Modify: `lib/online/online_page.dart`
+
+- [ ] **Step 1: 写出内置配置、旧值迁移和确认选择的失败测试**
+
+```dart
+test('migrates the legacy config and keeps the built-in config immutable', () async {
+  SharedPreferences.setMockInitialValues({
+    'online_api_url': 'https://legacy.example.com',
+    'online_api_token': 'legacy-token',
+  });
+  final store = const OnlineConfigStore();
+  final configs = await store.loadAll();
+
+  expect(configs.singleWhere((config) => config.isBuiltIn).url,
+      'https://www.kdocs.cn/api/v3/ide/file/cjQJmvEX03n2/script/V2-7LfFuITpzY7ymzPf8OfNy7/sync_task');
+  expect(configs.singleWhere((config) => !config.isBuiltIn).url,
+      'https://legacy.example.com');
+  await expectLater(store.delete(OnlineApiConfig.builtInId), throwsStateError);
+});
+
+testWidgets('confirms the selected configuration and returns it', (tester) async {
+  OnlineApiConfig? returned;
+  await tester.pumpWidget(MaterialApp(
+    home: Builder(builder: (context) => FilledButton(
+      onPressed: () => Navigator.push<OnlineApiConfig>(context,
+        MaterialPageRoute(builder: (_) => const OnlineConfigPage()),
+      ).then((value) => returned = value),
+      child: const Text('打开配置'),
+    )),
+  ));
+  await tester.tap(find.text('打开配置'));
+  await tester.pumpAndSettle();
+  await tester.tap(find.byKey(const Key('online-config-select-builtin')));
+  await tester.tap(find.byKey(const Key('online-config-confirm')));
+  await tester.pumpAndSettle();
+  expect(returned?.id, OnlineApiConfig.builtInId);
+});
+```
+
+- [ ] **Step 2: 运行测试确认列表 API 和控件尚不存在**
+
+Run: `flutter test test/online_page_test.dart`
+
+Expected: 编译失败，提示 `loadAll`、`isBuiltIn`、`online-config-confirm` 或 `online-config-select-builtin` 未定义。
+
+- [ ] **Step 3: 实现配置模型、迁移与存储操作**
+
+```dart
+class OnlineApiConfig {
+  static const builtInId = 'builtin';
+  final String id;
+  final String url;
+  final String token;
+  final bool isBuiltIn;
+
+  const OnlineApiConfig({
+    required this.id,
+    required this.url,
+    required this.token,
+    this.isBuiltIn = false,
+  });
+}
+
+Future<List<OnlineApiConfig>> loadAll();
+Future<OnlineApiConfig> load();
+Future<OnlineApiConfig> create({required String url, required String token});
+Future<OnlineApiConfig> update(OnlineApiConfig config);
+Future<void> delete(String id);
+Future<void> select(String id);
+```
+
+`loadAll` 总是把使用用户提供 URL/Token 的内置项放在第一个位置。首次读取时，把旧的 `online_api_url` 和 `online_api_token` 组合为一条自定义项；若 URL/Token 与内置项相同则不重复创建。列表和选中 ID 使用 JSON 字符串存储在新的偏好键中。`update` 与 `delete` 对内置 ID 抛出 `StateError`；删除活动自定义项后将活动 ID 写为 `builtin`。URL 必须含协议，Token 必须非空。
+
+- [ ] **Step 4: 将配置页改为可选列表与页内编辑弹窗**
+
+```dart
+Future<void> _confirmSelection() async {
+  final selected = _selected;
+  if (selected == null) return;
+  await widget.store.select(selected.id);
+  if (mounted) Navigator.pop(context, selected);
+}
+
+void _select(String? id) {
+  if (id != null) setState(() => _selectedId = id);
+}
+
+Widget _configTile(OnlineApiConfig config) => ListTile(
+  key: Key('online-config-select-${config.id}'),
+  leading: Radio<String>(value: config.id, groupValue: _selectedId,
+      onChanged: _select),
+  title: SelectableText(config.url),
+  subtitle: SelectableText('Token: ${config.token}'),
+);
+```
+
+页面标题保持“接口配置”。内置项显示“内置”标识，不显示编辑或删除按钮。自定义项显示编辑和删除图标；点击“新增配置”或编辑图标时，在当前页面的 `AlertDialog` 中复用 URL 和 Token 输入框，保存后重新读取配置列表。页面底部“确认使用”只对当前选中项生效。
+
+- [ ] **Step 5: 使在线页在确认配置后重新拉取列表**
+
+```dart
+final config = await Navigator.push<OnlineApiConfig>(context, route);
+if (config == null || !mounted) return;
+setState(() => _apiConfig = config);
+await _loadList();
+```
+
+删除 `online_page.dart` 中的 URL/Token 注释，配置值只保留在配置存储模块。已有的 `_requireConfig` 继续通过 `store.load()` 取得已确认的活动配置。
+
+- [ ] **Step 6: 运行配置测试确认通过**
+
+Run: `flutter test test/online_page_test.dart`
+
+Expected: 退出码 `0`，内置保护、迁移、自定义配置编辑、确认选择和配置切换刷新均通过。
+
+- [ ] **Step 7: 提交配置列表**
+
+```bash
+git add lib/online/online_config_store.dart lib/online/online_config_page.dart lib/online/online_page.dart test/online_page_test.dart
+git commit -m "feat: manage online API configurations"
+```
+
+### Task 2: 列表接口模型
 
 **Files:**
 - Modify: `test/net_util_test.dart`
@@ -92,7 +221,7 @@ git add lib/utils/net_util.dart test/net_util_test.dart
 git commit -m "feat: load online device lists"
 ```
 
-### Task 2: 表格远程行操作复用
+### Task 3: 表格远程行操作复用
 
 **Files:**
 - Modify: `test/spreadsheet_page_test.dart`
@@ -158,7 +287,7 @@ git add lib/spreadsheet_page.dart test/spreadsheet_page_test.dart
 git commit -m "feat: reuse spreadsheet for remote rows"
 ```
 
-### Task 3: 在线全量加载与同步
+### Task 4: 在线全量加载与同步
 
 **Files:**
 - Modify: `test/online_page_test.dart`
@@ -219,7 +348,7 @@ git add lib/online/online_page.dart test/online_page_test.dart
 git commit -m "feat: sync online device list"
 ```
 
-### Task 4: 共享导出服务与入口
+### Task 5: 共享导出服务与入口
 
 **Files:**
 - Modify: `test/home_page_view_test.dart`
@@ -308,7 +437,7 @@ git add lib/home_page.dart lib/home_page_view.dart lib/local_page.dart lib/expor
 git commit -m "feat: add shared export service page"
 ```
 
-### Task 5: 二维码真实名称与端到端回归
+### Task 6: 二维码真实名称与端到端回归
 
 **Files:**
 - Modify: `test/qr_create_page_test.dart`
