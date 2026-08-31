@@ -142,6 +142,8 @@ class SpreadsheetPage extends StatefulWidget {
   final Future<void> Function(XlsTable table)? onSave;
   final SpreadsheetRowSaveCallback? onSaveRow;
   final SpreadsheetRowDeleteCallback? onDeleteRow;
+  final String? title;
+  final List<Widget> appBarActions;
   final Future<void> Function(Uint8List bytes, String filename)?
       onExportQrCodes;
 
@@ -152,6 +154,8 @@ class SpreadsheetPage extends StatefulWidget {
     this.onSave,
     this.onSaveRow,
     this.onDeleteRow,
+    this.title,
+    this.appBarActions = const <Widget>[],
     this.onExportQrCodes,
   });
 
@@ -181,6 +185,15 @@ class _SpreadsheetPageState extends State<SpreadsheetPage> {
               (index) => index < row.length ? row[index] : '',
             ))
         .toList();
+  }
+
+  /// 在父级传入新表格时替换本地可编辑副本。
+  @override
+  void didUpdateWidget(covariant SpreadsheetPage oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (!identical(oldWidget.table, widget.table)) {
+      setState(() => _applyTable(widget.table));
+    }
   }
 
   @override
@@ -386,7 +399,7 @@ class _SpreadsheetPageState extends State<SpreadsheetPage> {
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   Text(
-                    widget.file.uri.pathSegments.last,
+                    widget.title ?? widget.file.uri.pathSegments.last,
                     maxLines: 2,
                     softWrap: true,
                   ),
@@ -403,6 +416,7 @@ class _SpreadsheetPageState extends State<SpreadsheetPage> {
           ],
         ),
         actions: [
+          ...widget.appBarActions,
           IconButton(
             tooltip: '新增一行',
             onPressed: _addRow,

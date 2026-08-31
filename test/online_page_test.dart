@@ -1,343 +1,154 @@
-import 'package:excel_app/online/online_page.dart';
+import 'package:excel_app/device_edit_page.dart';
 import 'package:excel_app/online/online_config_page.dart';
 import 'package:excel_app/online/online_config_store.dart';
-import 'package:excel_app/device_edit_page.dart';
+import 'package:excel_app/online/online_page.dart';
 import 'package:excel_app/utils/net_util.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-/// 验证在线设备页面的固定字段展示入口已经存在。
+/// 验证在线列表的加载、同步和配置切换流程。
 void main() {
   setUp(() {
-    SharedPreferences.setMockInitialValues({});
+    SharedPreferences.setMockInitialValues(<String, Object>{});
   });
   _registerConfigTests();
 
-  testWidgets('读取配置后显示完整 URL', (tester) async {
-    SharedPreferences.setMockInitialValues(<String, Object>{
-      'online_api_url': 'https://example.com/scripts/device_sync_task',
-      'online_api_token': 'token-123',
-    });
-
-    await _pumpWidget(tester, _app());
-    await tester.pumpAndSettle();
-
-    expect(
-      find.text('当前 URL: https://example.com/scripts/device_sync_task'),
-      findsOneWidget,
-    );
-    expect(find.widgetWithText(Text, 'token-123'), findsNothing);
-  });
-
-  testWidgets('仅提供扫码入口，不提供设备编号输入框', (tester) async {
-    await _pumpWidget(tester, _app());
-
-    expect(find.byKey(const Key('online-scan')), findsOneWidget);
-    expect(find.byKey(const Key('online-device-no')), findsNothing);
-    expect(find.byKey(const Key('online-query')), findsNothing);
-  });
-
-  testWidgets('扫码得到设备编号后自动查询', (tester) async {
-    String? queriedDeviceNo;
+  testWidgets('进入在线页后立即加载全部设备列表', (tester) async {
+    var listCalls = 0;
     await _pumpWidget(
       tester,
       _app(
-        scannedDeviceNo: 'P001',
-        onQuery: (deviceNo) async {
-          queriedDeviceNo = deviceNo;
-          return _result(
-            type: 'query',
-            deviceNo: deviceNo,
-            data: _deviceData(deviceNo: deviceNo),
-          );
+        onList: () async {
+          listCalls++;
+          return _listResult(<Map<String, dynamic>>[
+            _deviceRow(deviceNo: 'P001', name: '设备A'),
+            _deviceRow(deviceNo: 'P002', name: '设备B'),
+          ]);
         },
       ),
     );
-
-    await tester.tap(find.byKey(const Key('online-scan')));
     await tester.pumpAndSettle();
 
-    expect(queriedDeviceNo, 'P001');
-    expect(find.text('设备名称-P001'), findsOneWidget);
+    expect(listCalls, 1);
+    expect(find.text('P001'), findsOneWidget);
+    expect(find.text('设备B'), findsOneWidget);
+    expect(find.text('共 2 条数据'), findsOneWidget);
   });
 
-  testWidgets('查询成功后按固定 15 列展示整行数据', (tester) async {
-    await _pumpWidget(
-      tester,
-      _app(
-        onQuery: (_) async => _result(
-          type: 'query',
-          deviceNo: 'P001',
-          data: _deviceData(deviceNo: 'P001'),
-        ),
-      ),
-    );
-
-    await _queryDevice(tester);
-
-    expect(find.byKey(const Key('online-column-部门')), findsOneWidget);
-    expect(find.byKey(const Key('online-column-计量有效期至')), findsOneWidget);
-    expect(find.byKey(const Key('online-value-设备编号')), findsOneWidget);
-    expect(find.text('设备名称-P001'), findsOneWidget);
-    expect(find.text('查询成功'), findsOneWidget);
-  });
-
-  testWidgets('查询失败显示接口消息', (tester) async {
-    await _pumpWidget(
-      tester,
-      _app(
-        scannedDeviceNo: 'P999',
-        onQuery: (_) async => _result(
-          type: 'query',
-          success: false,
-          message: '未找到设备编号: P999',
-        ),
-      ),
-    );
-
-    await _queryDevice(tester);
-
-    expect(find.text('未找到设备编号: P999'), findsOneWidget);
-  });
-
-  testWidgets('使用脚本真实字段并完整传入编辑器', (tester) async {
-    await _pumpWidget(
-      tester,
-      _app(
-        onQuery: (_) async => _result(
-          type: 'query',
-          deviceNo: 'P001',
-          data: _actualDeviceData(deviceNo: 'P001'),
-        ),
-      ),
-    );
-
-    await _queryDevice(tester);
-    expect(
-      find.descendant(
-        of: find.byKey(const Key('online-value-部门')),
-        matching: find.text('质量管理部'),
-      ),
-      findsOneWidget,
-    );
-    expect(
-      find.descendant(
-        of: find.byKey(const Key('online-value-状态')),
-        matching: find.text('正常使用'),
-      ),
-      findsOneWidget,
-    );
-
-    await tester.ensureVisible(find.byKey(const Key('online-edit')));
-    await tester.tap(find.byKey(const Key('online-edit')));
-    await tester.pumpAndSettle();
-    expect(
-      tester
-          .widget<TextField>(find.byKey(const Key('field-部门')))
-          .controller!
-          .text,
-      '质量管理部',
-    );
-    expect(
-      tester
-          .widget<TextField>(find.byKey(const Key('field-仪器设备负责人')))
-          .controller!
-          .text,
-      '韩爽',
-    );
-  });
-
-  testWidgets('修改时直接使用脚本真实列名', (tester) async {
-    Map<String, dynamic>? modifiedData;
-    await _pumpWidget(
-      tester,
-      _app(
-        onQuery: (_) async => _result(
-          type: 'query',
-          deviceNo: 'P001',
-          data: _actualDeviceData(deviceNo: 'P001'),
-        ),
-        onModify: (_, data) async {
-          modifiedData = data;
-          return _result(
-            type: 'modify',
-            deviceNo: 'P001',
-            data: _actualDeviceData(deviceNo: 'P001'),
-          );
-        },
-      ),
-    );
-
-    await _queryDevice(tester);
-    await tester.ensureVisible(find.byKey(const Key('online-edit')));
-    await tester.tap(find.byKey(const Key('online-edit')));
-    await tester.pumpAndSettle();
-    await _saveEditor(tester);
-
-    expect(modifiedData?['部门'], '质量管理部');
-    expect(modifiedData?['状态'], '正常使用');
-    expect(modifiedData?['仪器设备负责人'], '韩爽');
-    expect(modifiedData?.containsKey('归属部门'), isFalse);
-    expect(modifiedData?.containsKey('设备状态'), isFalse);
-    expect(modifiedData?.containsKey('设备负责人'), isFalse);
-  });
-
-  testWidgets('新增时使用脚本实际列名提交整行', (tester) async {
-    Map<String, dynamic>? addedData;
-    await _pumpWidget(
-      tester,
-      _app(
-        onAdd: (data) async {
-          addedData = data;
-          return _result(
-            type: 'add',
-            deviceNo: 'P002',
-            data: _actualDeviceData(deviceNo: 'P002'),
-          );
-        },
-      ),
-    );
-
-    await tester.tap(find.byKey(const Key('online-add')));
-    await tester.pumpAndSettle();
-    await tester.enterText(find.byKey(const Key('field-设备编号')), 'P002');
-    await _saveEditor(tester);
-
-    expect(addedData?['设备编号'], 'P002');
-    expect(addedData?['部门'], isEmpty);
-    expect(addedData?['状态'], isEmpty);
-    expect(addedData?['仪器设备负责人'], isEmpty);
-    expect(addedData?.containsKey('归属部门'), isFalse);
-  });
-
-  testWidgets('修改编辑后的整行并用原设备编号调用接口', (tester) async {
+  testWidgets('修改成功后重新加载线上列表', (tester) async {
+    var listCalls = 0;
     String? modifiedNo;
-    Map<String, dynamic>? modifiedData;
     await _pumpWidget(
       tester,
       _app(
-        onQuery: (_) async => _result(
-          type: 'query',
-          deviceNo: 'P001',
-          data: _deviceData(deviceNo: 'P001'),
-        ),
-        onModify: (no, data) async {
-          modifiedNo = no;
-          modifiedData = data;
-          return _result(
-            type: 'modify',
-            deviceNo: no,
-            data: {...data, '设备名称': '修改后设备'},
-          );
+        onList: () async {
+          listCalls++;
+          return _listResult(<Map<String, dynamic>>[
+            _deviceRow(
+              deviceNo: listCalls == 1 ? 'P001' : 'P002',
+              name: listCalls == 1 ? '设备A' : '线上同步后的设备',
+            ),
+          ]);
+        },
+        onModify: (deviceNo, data) async {
+          modifiedNo = deviceNo;
+          return _result(type: 'modify', deviceNo: deviceNo, data: data);
         },
       ),
     );
-
-    await _queryDevice(tester);
-    await tester.ensureVisible(find.byKey(const Key('online-edit')));
-    await tester.tap(find.byKey(const Key('online-edit')));
     await tester.pumpAndSettle();
-    await tester.enterText(find.byKey(const Key('field-设备名称')), '修改后设备');
+
+    await tester.tap(find.text('设备A'));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byKey(const Key('field-设备名称')), '编辑后设备');
     await _saveEditor(tester);
 
-    expect(find.byType(DeviceEditPage), findsNothing);
     expect(modifiedNo, 'P001');
-    expect(modifiedData?['设备名称'], '修改后设备');
-    expect(find.text('修改后设备'), findsOneWidget);
-    expect(find.text('修改成功'), findsOneWidget);
+    expect(listCalls, 2);
+    expect(find.byType(DeviceEditPage), findsNothing);
+    expect(find.text('线上同步后的设备'), findsOneWidget);
+    expect(find.text('P001'), findsNothing);
   });
 
-  testWidgets('新增整行并展示接口返回的新设备', (tester) async {
-    Map<String, dynamic>? addedData;
+  testWidgets('新增和删除成功后都重新加载线上列表', (tester) async {
+    var listCalls = 0;
+    var added = false;
+    var deleted = false;
     await _pumpWidget(
       tester,
       _app(
+        onList: () async {
+          listCalls++;
+          if (!added) {
+            return _listResult(<Map<String, dynamic>>[
+              _deviceRow(deviceNo: 'P001', name: '设备A'),
+            ]);
+          }
+          if (!deleted) {
+            return _listResult(<Map<String, dynamic>>[
+              _deviceRow(deviceNo: 'P002', name: '设备B'),
+            ]);
+          }
+          return _listResult(const <Map<String, dynamic>>[]);
+        },
         onAdd: (data) async {
-          addedData = data;
-          return _result(
-            type: 'add',
-            deviceNo: 'P002',
-            data: {...data, '设备编号': 'P002', '设备名称': '新增设备'},
-          );
+          added = true;
+          return _result(type: 'add', data: data);
+        },
+        onDelete: (deviceNo) async {
+          deleted = true;
+          return _result(type: 'delete', deviceNo: deviceNo);
         },
       ),
     );
+    await tester.pumpAndSettle();
 
-    await tester.tap(find.byKey(const Key('online-add')));
+    await tester.tap(find.byTooltip('新增一行'));
     await tester.pumpAndSettle();
     await tester.enterText(find.byKey(const Key('field-设备编号')), 'P002');
-    await tester.enterText(find.byKey(const Key('field-设备名称')), '新增设备');
+    await tester.enterText(find.byKey(const Key('field-设备名称')), '设备B');
     await _saveEditor(tester);
+    expect(find.text('设备B'), findsOneWidget);
 
-    expect(find.byType(DeviceEditPage), findsNothing);
-    expect(addedData?['设备编号'], 'P002');
-    expect(find.byKey(const Key('online-value-设备编号')), findsOneWidget);
-    expect(
-      find.descendant(
-        of: find.byKey(const Key('online-value-设备名称')),
-        matching: find.text('新增设备'),
-      ),
-      findsOneWidget,
-    );
-    expect(find.text('新增成功'), findsOneWidget);
+    await tester.longPress(find.text('设备B'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('删除'));
+    await tester.pumpAndSettle();
+
+    expect(listCalls, 3);
+    expect(find.text('暂无数据'), findsOneWidget);
   });
 
-  testWidgets('删除二次确认后清空查询结果', (tester) async {
-    String? deletedNo;
+  testWidgets('确认切换配置后重新加载列表', (tester) async {
+    const store = OnlineConfigStore();
+    final custom = await store.create(
+      url: 'https://example.com/sync',
+      token: 'custom-token',
+    );
+    var listCalls = 0;
     await _pumpWidget(
       tester,
       _app(
-        onQuery: (_) async => _result(
-          type: 'query',
-          deviceNo: 'P001',
-          data: _deviceData(deviceNo: 'P001'),
-        ),
-        onDelete: (no) async {
-          deletedNo = no;
-          return _result(type: 'delete', deviceNo: no);
+        configStore: store,
+        onList: () async {
+          listCalls++;
+          return _listResult(<Map<String, dynamic>>[
+            _deviceRow(deviceNo: 'P00$listCalls', name: '设备$listCalls'),
+          ]);
         },
       ),
     );
-
-    await _queryDevice(tester);
-    await tester.ensureVisible(find.byKey(const Key('online-delete')));
-    await tester.tap(find.byKey(const Key('online-delete')));
-    await tester.pump();
-    expect(find.text('确认删除设备'), findsOneWidget);
-    await tester.tap(find.text('确认删除'));
     await tester.pumpAndSettle();
 
-    expect(deletedNo, 'P001');
-    expect(find.byKey(const Key('online-value-设备编号')), findsNothing);
-    expect(find.text('删除成功'), findsOneWidget);
-  });
-
-  testWidgets('修改失败时编辑页保持打开', (tester) async {
-    await _pumpWidget(
-      tester,
-      _app(
-        onQuery: (_) async => _result(
-          type: 'query',
-          deviceNo: 'P001',
-          data: _deviceData(deviceNo: 'P001'),
-        ),
-        onModify: (_, __) async => _result(
-          type: 'modify',
-          success: false,
-          message: '设备不存在',
-        ),
-      ),
-    );
-
-    await _queryDevice(tester);
-    await tester.ensureVisible(find.byKey(const Key('online-edit')));
-    await tester.tap(find.byKey(const Key('online-edit')));
+    await tester.tap(find.byKey(const Key('online-config')));
     await tester.pumpAndSettle();
-    await _saveEditor(tester);
+    await tester.tap(find.byKey(Key('online-config-select-${custom.id}')));
+    await tester.tap(find.byKey(const Key('online-config-confirm')));
+    await tester.pumpAndSettle();
 
-    expect(find.byType(DeviceEditPage), findsOneWidget);
-    expect(find.textContaining('保存失败'), findsOneWidget);
+    expect(listCalls, 2);
+    expect(find.text('P002'), findsOneWidget);
   });
 }
 
@@ -423,74 +234,54 @@ void _registerConfigTests() {
 
 /// 构造在线页测试所需的应用壳和可替换 API 回调。
 Widget _app({
-  Future<DeviceResult> Function(String)? onQuery,
+  Future<DeviceListResult> Function()? onList,
   Future<DeviceResult> Function(String, Map<String, dynamic>)? onModify,
   Future<DeviceResult> Function(Map<String, dynamic>)? onAdd,
   Future<DeviceResult> Function(String)? onDelete,
-  String? scannedDeviceNo = 'P001',
+  OnlineConfigStore configStore = const OnlineConfigStore(),
 }) {
   return MaterialApp(
     home: OnlinePage(
-      onQuery: onQuery,
+      onList: onList,
       onModify: onModify,
       onAdd: onAdd,
       onDelete: onDelete,
-      onScan: (_) async => scannedDeviceNo,
+      configStore: configStore,
     ),
   );
 }
 
-/// 使用固定字段构造一整行在线设备数据。
-Map<String, dynamic> _deviceData({required String deviceNo}) {
-  return {
-    for (final header in onlineDeviceHeaders)
-      header: header == '设备编号' ? deviceNo : '$header-$deviceNo',
-  };
-}
+/// 构造在线列表的一条设备记录。
+Map<String, dynamic> _deviceRow({
+  required String deviceNo,
+  required String name,
+}) =>
+    <String, dynamic>{
+      '设备编号': deviceNo,
+      '设备名称': name,
+      '状态': '正常使用',
+    };
 
-/// 构造 WPS 表格脚本实际返回的列名和一整行设备数据。
-Map<String, dynamic> _actualDeviceData({required String deviceNo}) {
-  return {
-    '部门': '质量管理部',
-    '来源': '自购',
-    '状态': '正常使用',
-    '设备编号': deviceNo,
-    '设备名称': '新飞牌冷藏冷冻箱',
-    '设备型号': 'BCD-239V',
-    '机身号': '/',
-    '生产厂家': '河南新飞电器有限公司',
-    '所在区域': 'PCR质检I区',
-    '所在房间': '',
-    '设备分类': '一般设备',
-    '仪器设备负责人': '韩爽',
-    '计量机构': '',
-    '证书类型': '',
-    '计量有效期至': '',
-  };
-}
+/// 构造网络层返回的列表业务结果。
+DeviceListResult _listResult(List<Map<String, dynamic>> rows) =>
+    DeviceListResult.fromJson(<String, dynamic>{
+      'success': true,
+      'type': 'list',
+      'rows': rows,
+    });
 
-/// 构造网络层返回的业务结果。
+/// 构造网络层返回的单行操作结果。
 DeviceResult _result({
   required String type,
-  bool success = true,
   String? deviceNo,
   Map<String, dynamic>? data,
-  String? message,
-}) {
-  return DeviceResult.fromJson({
-    'success': success,
-    'type': type,
-    if (deviceNo != null) 'device_no': deviceNo,
-    if (data != null) 'data': data,
-    if (message != null) 'message': message,
-  });
-}
-
-/// 在测试中扫码一次设备编号并等待页面完成查询。
-Future<void> _queryDevice(WidgetTester tester) async {
-  await tester.tap(find.byKey(const Key('online-scan')));
-  await tester.pumpAndSettle();
-}
+}) =>
+    DeviceResult.fromJson(<String, dynamic>{
+      'success': true,
+      'type': type,
+      if (deviceNo != null) 'device_no': deviceNo,
+      if (data != null) 'data': data,
+    });
 
 /// 使用足够高的测试视口容纳共享编辑器的完整设备表单。
 Future<void> _pumpWidget(WidgetTester tester, Widget child) async {
