@@ -1,5 +1,4 @@
 import 'dart:io';
-import 'dart:typed_data';
 
 import 'package:excel_app/network_tools/xls_reader.dart';
 import 'package:excel_app/online/online_config_page.dart';
