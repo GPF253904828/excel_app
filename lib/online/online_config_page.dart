@@ -229,12 +229,16 @@ class _OnlineConfigPageState extends State<OnlineConfigPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('接口配置')),
-      floatingActionButton: FloatingActionButton.small(
-        key: const Key('online-config-add'),
-        tooltip: '新增配置',
-        onPressed: _loading ? null : () => _openEditor(),
-        child: const Icon(Icons.add),
+      appBar: AppBar(
+        title: const Text('接口配置'),
+        actions: [
+          IconButton(
+            key: const Key('online-config-add'),
+            tooltip: '新增配置',
+            onPressed: _loading ? null : () => _openEditor(),
+            icon: const Icon(Icons.add),
+          ),
+        ],
       ),
       body: SafeArea(
         child: Column(

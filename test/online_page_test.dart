@@ -14,6 +14,19 @@ void main() {
   });
   _registerConfigTests();
 
+  test('标准字段固定在额外字段之前', () {
+    expect(
+      onlineTableHeaders(<Map<String, dynamic>>[
+        <String, dynamic>{
+          '设备名称': '设备A',
+          '备注': '扩展字段',
+          '设备编号': 'P001',
+        },
+      ]),
+      <String>[...onlineDeviceHeaders, '备注'],
+    );
+  });
+
   testWidgets('进入在线页后立即加载全部设备列表', (tester) async {
     var listCalls = 0;
     await _pumpWidget(
@@ -229,6 +242,15 @@ void _registerConfigTests() {
 
     expect(returned?.id, custom.id);
     expect((await store.load())?.id, custom.id);
+  });
+
+  testWidgets('新增和确认操作不会重叠', (tester) async {
+    await tester.pumpWidget(const MaterialApp(home: OnlineConfigPage()));
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const Key('online-config-add')), findsOneWidget);
+    expect(find.byType(FloatingActionButton), findsNothing);
+    expect(find.byKey(const Key('online-config-confirm')), findsOneWidget);
   });
 }
 

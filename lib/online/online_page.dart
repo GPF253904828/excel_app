@@ -28,6 +28,17 @@ const List<String> onlineDeviceHeaders = <String>[
   '计量有效期至',
 ];
 
+/// 返回固定业务字段优先、接口额外字段追加的在线表格列序。
+List<String> onlineTableHeaders(List<Map<String, dynamic>> rows) {
+  final headers = List<String>.from(onlineDeviceHeaders);
+  for (final row in rows) {
+    for (final header in row.keys) {
+      if (!headers.contains(header)) headers.add(header);
+    }
+  }
+  return headers;
+}
+
 /// 定义在线设备列表接口的可替换回调。
 typedef DeviceListCallback = Future<DeviceListResult> Function();
 
@@ -193,13 +204,7 @@ class _OnlinePageState extends State<OnlinePage> {
 
   /// 依据接口返回的字段顺序构造二维表格，保留所有额外列。
   XlsTable _tableFromRows(List<Map<String, dynamic>> rows) {
-    final headers = <String>[];
-    for (final row in rows) {
-      for (final header in row.keys) {
-        if (!headers.contains(header)) headers.add(header);
-      }
-    }
-    if (headers.isEmpty) headers.addAll(onlineDeviceHeaders);
+    final headers = onlineTableHeaders(rows);
     return XlsTable(
       headers: headers,
       rows: <List<String>>[
