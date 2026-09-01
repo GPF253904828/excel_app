@@ -33,8 +33,8 @@ class HomePageView extends StatelessWidget {
                     height: 64,
                     child: FilledButton.icon(
                       onPressed: isOnlineLoading ? null : onOnlineScan,
-                      icon: const Icon(Icons.document_scanner_outlined),
-                      label: const Text('在线扫码'),
+                      icon: const Icon(Icons.qr_code_scanner_outlined),
+                      label: const Text('扫码'),
                     ),
                   ),
                   const SizedBox(height: 20),
@@ -44,19 +44,19 @@ class HomePageView extends StatelessWidget {
                     child: OutlinedButton.icon(
                       onPressed: isOnlineLoading ? null : onOnlineList,
                       icon: const Icon(Icons.cloud_outlined),
-                      label: const Text('在线查看全部'),
+                      label: const Text('全部'),
                     ),
                   ),
-                  const SizedBox(height: 20),
-                  SizedBox(
-                    width: 240,
-                    height: 64,
-                    child: OutlinedButton.icon(
-                      onPressed: isOnlineLoading ? null : onLocalPage,
-                      icon: const Icon(Icons.folder_outlined),
-                      label: const Text('本地'),
-                    ),
-                  ),
+                  const SizedBox(height: 200),
+                  // SizedBox(
+                  //   width: 240,
+                  //   height: 64,
+                  //   child: OutlinedButton.icon(
+                  //     onPressed: isOnlineLoading ? null : onLocalPage,
+                  //     icon: const Icon(Icons.folder_outlined),
+                  //     label: const Text('本地'),
+                  //   ),
+                  // ),
                 ],
               ),
             ),
