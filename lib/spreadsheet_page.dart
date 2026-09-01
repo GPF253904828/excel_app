@@ -23,6 +23,9 @@ typedef SpreadsheetRowDeleteCallback = Future<XlsTable> Function(
   List<String> row,
 );
 
+/// 表格下拉刷新或触底加载更多时执行的异步回调。
+typedef SpreadsheetPageLoadCallback = Future<void> Function();
+
 bool _isNormalStatus(String status) => status == '正常使用' || status == '正常';
 bool _isRepairStatus(String status) => status == '维修中' || status == '维修';
 
@@ -142,6 +145,11 @@ class SpreadsheetPage extends StatefulWidget {
   final Future<void> Function(XlsTable table)? onSave;
   final SpreadsheetRowSaveCallback? onSaveRow;
   final SpreadsheetRowDeleteCallback? onDeleteRow;
+  final SpreadsheetPageLoadCallback? onRefresh;
+  final SpreadsheetPageLoadCallback? onLoadMore;
+  final bool hasMore;
+  final int? totalCount;
+  final bool isLoading;
   final String? title;
   final List<Widget> appBarActions;
   final QrExportPageBuilder? qrExportPageBuilder;
@@ -155,6 +163,11 @@ class SpreadsheetPage extends StatefulWidget {
     this.onSave,
     this.onSaveRow,
     this.onDeleteRow,
+    this.onRefresh,
+    this.onLoadMore,
+    this.hasMore = false,
+    this.totalCount,
+    this.isLoading = false,
     this.title,
     this.appBarActions = const <Widget>[],
     this.qrExportPageBuilder,
@@ -170,6 +183,7 @@ class _SpreadsheetPageState extends State<SpreadsheetPage> {
   late List<List<String>> _rows;
   late final ScrollController _horizontalController;
   bool _saving = false;
+  bool _loadingMore = false;
 
   @override
   void initState() {
@@ -202,6 +216,31 @@ class _SpreadsheetPageState extends State<SpreadsheetPage> {
   void dispose() {
     _horizontalController.dispose();
     super.dispose();
+  }
+
+  /// 在用户滚动到列表底部后请求下一页，并避免重复并发请求。
+  Future<void> _loadMore() async {
+    final onLoadMore = widget.onLoadMore;
+    if (_loadingMore || !widget.hasMore || onLoadMore == null) return;
+    setState(() => _loadingMore = true);
+    try {
+      await onLoadMore();
+    } finally {
+      if (mounted) setState(() => _loadingMore = false);
+    }
+  }
+
+  /// 仅响应用户垂直滚动到末尾的手势，横向滚动不触发分页。
+  bool _handleScrollNotification(ScrollNotification notification) {
+    final metrics = notification.metrics;
+    if (notification is ScrollEndNotification &&
+        notification.dragDetails != null &&
+        metrics.axis == Axis.vertical &&
+        metrics.maxScrollExtent > 0 &&
+        metrics.pixels >= metrics.maxScrollExtent) {
+      _loadMore();
+    }
+    return false;
   }
 
   /// 打开新增行编辑页，只有保存成功后才追加到当前列表。
@@ -407,7 +446,7 @@ class _SpreadsheetPageState extends State<SpreadsheetPage> {
                     softWrap: true,
                   ),
                   Text(
-                    '共 ${_rows.length} 条数据',
+                    _dataCountText(),
                     style: Theme.of(context).textTheme.labelMedium?.copyWith(
                           color: Theme.of(context).colorScheme.primary,
                           fontWeight: FontWeight.w700,
@@ -463,47 +502,116 @@ class _SpreadsheetPageState extends State<SpreadsheetPage> {
           ],
         ),
       ),
-      body: SafeArea(
-        child: LayoutBuilder(
-          builder: (context, constraints) {
-            return SingleChildScrollView(
-              controller: _horizontalController,
-              scrollDirection: Axis.horizontal,
-              padding: const EdgeInsets.fromLTRB(0, 8, 0, 20),
-              child: SizedBox(
-                width: tableWidth < constraints.maxWidth
-                    ? constraints.maxWidth
-                    : tableWidth,
-                height: constraints.maxHeight - 28,
-                child: Column(
-                  children: [
-                    _buildHeader(_filledWidths(widths, constraints.maxWidth)),
-                    const SizedBox(height: 1),
-                    Expanded(
-                      child: _rows.isEmpty
-                          ? Center(
-                              child: Text(
-                                '暂无数据',
-                                style:
-                                    TextStyle(color: colors.onSurfaceVariant),
-                              ),
-                            )
-                          : ListView.builder(
-                              itemCount: _rows.length,
-                              itemBuilder: (context, rowIndex) => _buildRow(
-                                rowIndex,
-                                _filledWidths(widths, constraints.maxWidth),
-                              ),
-                            ),
+      body: Stack(
+        children: <Widget>[
+          SafeArea(
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                return SingleChildScrollView(
+                  controller: _horizontalController,
+                  scrollDirection: Axis.horizontal,
+                  padding: const EdgeInsets.fromLTRB(0, 8, 0, 20),
+                  child: SizedBox(
+                    width: tableWidth < constraints.maxWidth
+                        ? constraints.maxWidth
+                        : tableWidth,
+                    height: constraints.maxHeight - 28,
+                    child: Column(
+                      children: [
+                        _buildHeader(
+                          _filledWidths(widths, constraints.maxWidth),
+                        ),
+                        const SizedBox(height: 1),
+                        Expanded(
+                          child: _buildScrollableRows(
+                            _filledWidths(widths, constraints.maxWidth),
+                            colors,
+                          ),
+                        ),
+                      ],
                     ),
-                  ],
-                ),
-              ),
-            );
-          },
-        ),
+                  ),
+                );
+              },
+            ),
+          ),
+          if (widget.isLoading) _buildPageLoadingOverlay(),
+        ],
       ),
     );
+  }
+
+  /// 根据分页状态展示已加载数量、总数量或全部加载完成状态。
+  String _dataCountText() {
+    final total = widget.totalCount;
+    if (total == null) return '共 ${_rows.length} 条数据';
+    if (!widget.hasMore) return '已全部加载完成 $total 条数据';
+    return '已加载${_rows.length}/$total条数据';
+  }
+
+  /// 在页面中央显示阻止交互的浮层加载提示。
+  Widget _buildPageLoadingOverlay() => Positioned.fill(
+        child: ColoredBox(
+          color: const Color(0x99FFFFFF),
+          child: Center(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: const <Widget>[
+                CircularProgressIndicator(),
+                SizedBox(height: 12),
+                Text('Loading...'),
+              ],
+            ),
+          ),
+        ),
+      );
+
+  /// 构建可下拉刷新和触底加载更多的纵向数据区域。
+  Widget _buildScrollableRows(List<double> widths, ColorScheme colors) {
+    final showLoadFooter = widget.onLoadMore != null;
+    final list = ListView.builder(
+      key: const Key('spreadsheet-vertical-list'),
+      physics: const AlwaysScrollableScrollPhysics(),
+      itemCount: _rows.isEmpty ? 1 : _rows.length + (showLoadFooter ? 1 : 0),
+      itemBuilder: (context, rowIndex) {
+        if (_rows.isEmpty) {
+          return SizedBox(
+            height: 280,
+            child: Center(
+              child: Text(
+                '暂无数据',
+                style: TextStyle(color: colors.onSurfaceVariant),
+              ),
+            ),
+          );
+        }
+        if (showLoadFooter && rowIndex == _rows.length) {
+          return _buildLoadFooter();
+        }
+        return _buildRow(rowIndex, widths);
+      },
+    );
+    final scrollable = NotificationListener<ScrollNotification>(
+      onNotification: _handleScrollNotification,
+      child: list,
+    );
+    final onRefresh = widget.onRefresh;
+    final refreshable = onRefresh == null
+        ? scrollable
+        : RefreshIndicator(onRefresh: onRefresh, child: scrollable);
+    return refreshable;
+  }
+
+  /// 根据分页状态显示加载完毕或保留页尾空间。
+  Widget _buildLoadFooter() {
+    if (_loadingMore) return const SizedBox(height: 64);
+    if (!widget.hasMore) {
+      return const SizedBox(
+        height: 64,
+        child: Center(child: Text('加载完毕')),
+      );
+    }
+    return const SizedBox(height: 24);
   }
 
   /// 将最后一列补足到屏幕宽度，避免表格右侧留下空白。

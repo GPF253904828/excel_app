@@ -1,6 +1,6 @@
 // 入参：Context.argv = { type, device_no, data }
 // type: query(查询) / modify(修改) / add(新增) / delete(删除) / list(列表)
-//   list(列表)：返回表格所有数据行，可选 includeEmpty=true 保留全空行
+//   list(列表)：分页返回表格数据，默认每页 100 条，用 start/limit 翻页
 const argv = Context.argv || {}
 let type = String(argv.type || '').trim().toLowerCase()
 
@@ -17,6 +17,9 @@ const deviceNo = String(argv.device_no == null ? '' : argv.device_no).trim()
 const data = (argv.data && typeof argv.data === 'object') ? argv.data : {}
 // list 额外参数：includeEmpty 是否包含全空行（默认 false，过滤）
 const includeEmpty = argv.includeEmpty === true
+// list 分页参数：start 起始索引(0-based)，limit 每页条数(默认 100)
+const startIdx = Math.max(0, parseInt(argv.start ?? '0') || 0)
+const pageLimit = Math.max(1, parseInt(argv.limit ?? '100') || 100)
 
 const sheet = Application.ActiveSheet
 const used = sheet.UsedRange
@@ -71,24 +74,41 @@ if (deviceCol < 0) {
 }
 
 switch (type) {
-  // 0) 列表：返回所有数据行
+  // 0) 列表：分页返回所有数据行（默认每页 100 条，用 start/limit 翻页）
+  // start/nextStart 均以有效设备行计数，不受表内空行影响
   case 'list': {
+    const dataStartRow = startRow + 1
+    const lastDataRow = startRow + nRows - 1
+    let total = 0
     const rows = []
-    for (let i = 1; i < nRows; i++) {
-      const rowNum = startRow + i
-      const rowData = {}
-      let isEmpty = true
-      for (let j = 0; j < nCols; j++) {
-        const key = headers[j]
-        if (!key) continue
-        const val = sheet.Cells(rowNum, startCol + j).Text
-        rowData[key] = val
-        if (String(val).trim() !== '') isEmpty = false
+    for (let rowNum = dataStartRow; rowNum <= lastDataRow; rowNum++) {
+      const hasDeviceNo = String(sheet.Cells(rowNum, deviceCol).Text).trim() !== ''
+      if (!includeEmpty && !hasDeviceNo) continue
+
+      if (total >= startIdx && rows.length < pageLimit) {
+        const rowData = {}
+        for (let j = 0; j < nCols; j++) {
+          const key = headers[j]
+          if (key) rowData[key] = sheet.Cells(rowNum, startCol + j).Text
+        }
+        rows.push(rowData)
       }
-      if (isEmpty && !includeEmpty) continue
-      rows.push(rowData)
+      total++
     }
-    return { success: true, type: 'list', total: rows.length, rows: rows }
+
+    const nextStart = startIdx + rows.length
+    const hasMore = nextStart < total
+    return {
+      success: true,
+      type: 'list',
+      total: total,
+      start: startIdx,
+      limit: pageLimit,
+      count: rows.length,
+      hasMore: hasMore,
+      nextStart: nextStart,
+      rows: rows
+    }
   }
 
   case 'query': {

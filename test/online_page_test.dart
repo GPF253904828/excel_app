@@ -16,55 +16,282 @@ void main() {
   });
   _registerConfigTests();
 
-  test('标准字段固定在额外字段之前', () {
+  test('接口返回字段按预设顺序排列且不补默认列', () {
     expect(
       onlineTableHeaders(<Map<String, dynamic>>[
         <String, dynamic>{
           '设备名称': '设备A',
+          '设备负责人': '张三',
           '备注': '扩展字段',
+          '归属部门': '设备部',
+          '设备状态': '正常使用',
           '设备编号': 'P001',
         },
       ]),
-      <String>[...onlineDeviceHeaders, '备注'],
+      <String>[
+        '归属部门',
+        '设备状态',
+        '设备编号',
+        '设备名称',
+        '设备负责人',
+        '备注',
+      ],
     );
   });
 
-  testWidgets('进入在线页后立即加载全部设备列表', (tester) async {
-    var listCalls = 0;
+  testWidgets('进入在线页后加载首页，按钮和下拉都会重新加载首页', (tester) async {
+    final requestedStarts = <int>[];
     await _pumpWidget(
       tester,
       _app(
-        onList: () async {
-          listCalls++;
+        onList: ({required start, required limit}) async {
+          requestedStarts.add(start);
           return _listResult(<Map<String, dynamic>>[
-            _deviceRow(deviceNo: 'P001', name: '设备A'),
-            _deviceRow(deviceNo: 'P002', name: '设备B'),
-          ]);
+            _deviceRow(
+              deviceNo:
+                  start == 0 && requestedStarts.length == 1 ? 'P001' : 'P002',
+              name: start == 0 && requestedStarts.length == 1 ? '设备A' : '设备B',
+            ),
+          ], total: 2, start: start, limit: limit);
         },
       ),
     );
     await tester.pumpAndSettle();
 
-    expect(listCalls, 1);
+    expect(requestedStarts, <int>[0]);
     expect(find.text('P001'), findsOneWidget);
-    expect(find.text('设备B'), findsOneWidget);
-    expect(find.text('共 2 条数据'), findsOneWidget);
+    await tester.tap(find.byTooltip('刷新列表'));
+    await tester.pumpAndSettle();
+
+    expect(requestedStarts, <int>[0, 0]);
+    expect(find.text('P001'), findsNothing);
+    expect(find.text('P002'), findsOneWidget);
+
+    await tester.fling(
+      find.byKey(const Key('spreadsheet-vertical-list')),
+      const Offset(0, 500),
+      1000,
+    );
+    await tester.pumpAndSettle();
+
+    expect(requestedStarts, <int>[0, 0, 0]);
   });
 
-  testWidgets('修改成功后重新加载线上列表', (tester) async {
+  testWidgets('刷新首页时显示 Loading', (tester) async {
+    final refreshResult = Completer<DeviceListResult>();
+    var listCalls = 0;
+    await _pumpWidget(
+      tester,
+      _app(
+        onList: ({required start, required limit}) {
+          listCalls++;
+          if (listCalls == 1) {
+            return Future<DeviceListResult>.value(
+              _listResult(
+                <Map<String, dynamic>>[
+                  _deviceRow(deviceNo: 'P001', name: '设备A'),
+                ],
+                total: 2,
+                start: start,
+                limit: limit,
+              ),
+            );
+          }
+          return refreshResult.future;
+        },
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byTooltip('刷新列表'));
+    await tester.pump();
+    expect(find.text('Loading...'), findsOneWidget);
+
+    refreshResult.complete(
+      _listResult(
+        <Map<String, dynamic>>[
+          _deviceRow(deviceNo: 'P002', name: '设备B'),
+        ],
+        total: 2,
+        start: 0,
+        limit: 50,
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Loading...'), findsNothing);
+    expect(find.text('P002'), findsOneWidget);
+  });
+
+  testWidgets('加载下一页时显示 Loading', (tester) async {
+    final nextPage = Completer<DeviceListResult>();
+    addTearDown(() {
+      if (!nextPage.isCompleted) {
+        nextPage.complete(
+          _listResult(
+            const <Map<String, dynamic>>[],
+            total: 50,
+            start: 53,
+            limit: 50,
+          ),
+        );
+      }
+    });
+    await _pumpWidget(
+      tester,
+      _app(
+        onList: ({required start, required limit}) {
+          if (start == 53) return nextPage.future;
+          return Future<DeviceListResult>.value(
+            _listResult(
+              _deviceRows('P', 50),
+              total: 51,
+              start: start,
+              limit: limit,
+              hasMore: true,
+              nextStart: 53,
+            ),
+          );
+        },
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.drag(
+      find.byKey(const Key('spreadsheet-vertical-list')),
+      const Offset(0, -6000),
+    );
+    await tester.pump();
+    expect(find.text('Loading...'), findsOneWidget);
+
+    nextPage.complete(
+      _listResult(
+        _deviceRows('P', 1, offset: 50),
+        total: 51,
+        start: 53,
+        limit: 50,
+      ),
+    );
+    await tester.pumpAndSettle();
+  });
+
+  testWidgets('首页加载失败时显示接口错误', (tester) async {
+    await _pumpWidget(
+      tester,
+      _app(
+        onList: ({required start, required limit}) async =>
+            DeviceListResult.fromJson(<String, dynamic>{
+          'success': false,
+          'message': '接口不可用',
+        }),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('接口不可用'), findsOneWidget);
+  });
+
+  testWidgets('上拉按脚本 nextStart 加载下一页，并在末页显示加载完毕', (tester) async {
+    final requestedStarts = <int>[];
+    await _pumpWidget(
+      tester,
+      _app(
+        onList: ({required start, required limit}) async {
+          requestedStarts.add(start);
+          return start == 0
+              ? _listResult(
+                  _deviceRows('P', 50),
+                  total: 51,
+                  start: start,
+                  limit: limit,
+                  hasMore: true,
+                  nextStart: 53,
+                )
+              : _listResult(
+                  _deviceRows('P', 1, offset: 50),
+                  total: 51,
+                  start: start,
+                  limit: limit,
+                );
+        },
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.drag(
+      find.byKey(const Key('spreadsheet-vertical-list')),
+      const Offset(0, -6000),
+    );
+    await tester.pumpAndSettle();
+    await tester.drag(
+      find.byKey(const Key('spreadsheet-vertical-list')),
+      const Offset(0, -300),
+    );
+    await tester.pumpAndSettle();
+
+    expect(requestedStarts, <int>[0, 53]);
+    expect(find.text('加载完毕'), findsOneWidget);
+    expect(find.text('已全部加载完成 51 条数据'), findsOneWidget);
+  });
+
+  testWidgets('恰好 50 条且 hasMore 为 false 时不再加载下一页', (tester) async {
+    var listCalls = 0;
+    await _pumpWidget(
+      tester,
+      _app(
+        onList: ({required start, required limit}) async {
+          listCalls++;
+          return _listResult(
+            _deviceRows('P', 50),
+            total: 50,
+            start: start,
+            limit: limit,
+          );
+        },
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.drag(
+      find.byKey(const Key('spreadsheet-vertical-list')),
+      const Offset(0, -6000),
+    );
+    await tester.pumpAndSettle();
+
+    expect(listCalls, 1);
+    expect(find.text('加载完毕'), findsOneWidget);
+  });
+
+  testWidgets('分页标题显示已加载数量和接口总数', (tester) async {
+    await _pumpWidget(
+      tester,
+      _app(
+        onList: ({required start, required limit}) async => _listResult(
+          _deviceRows('P', 50),
+          total: 120,
+          start: start,
+          limit: limit,
+          hasMore: true,
+          nextStart: 50,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('已加载 50 / 共 120 条数据'), findsOneWidget);
+  });
+
+  testWidgets('修改成功后更新本地行但不重新加载线上列表', (tester) async {
     var listCalls = 0;
     String? modifiedNo;
     await _pumpWidget(
       tester,
       _app(
-        onList: () async {
+        onList: ({required start, required limit}) async {
           listCalls++;
           return _listResult(<Map<String, dynamic>>[
-            _deviceRow(
-              deviceNo: listCalls == 1 ? 'P001' : 'P002',
-              name: listCalls == 1 ? '设备A' : '线上同步后的设备',
-            ),
-          ]);
+            _deviceRow(deviceNo: 'P001', name: '设备A'),
+          ], total: 1, start: start, limit: limit);
         },
         onModify: (deviceNo, data) async {
           modifiedNo = deviceNo;
@@ -80,39 +307,27 @@ void main() {
     await _saveEditor(tester);
 
     expect(modifiedNo, 'P001');
-    expect(listCalls, 2);
+    expect(listCalls, 1);
     expect(find.byType(DeviceEditPage), findsNothing);
-    expect(find.text('线上同步后的设备'), findsOneWidget);
-    expect(find.text('P001'), findsNothing);
+    expect(find.text('编辑后设备'), findsOneWidget);
+    expect(find.text('P001'), findsOneWidget);
   });
 
-  testWidgets('新增和删除成功后都重新加载线上列表', (tester) async {
+  testWidgets('新增和删除成功后更新本地列表但不重新加载', (tester) async {
     var listCalls = 0;
-    var added = false;
-    var deleted = false;
     await _pumpWidget(
       tester,
       _app(
-        onList: () async {
+        onList: ({required start, required limit}) async {
           listCalls++;
-          if (!added) {
-            return _listResult(<Map<String, dynamic>>[
-              _deviceRow(deviceNo: 'P001', name: '设备A'),
-            ]);
-          }
-          if (!deleted) {
-            return _listResult(<Map<String, dynamic>>[
-              _deviceRow(deviceNo: 'P002', name: '设备B'),
-            ]);
-          }
-          return _listResult(const <Map<String, dynamic>>[]);
+          return _listResult(<Map<String, dynamic>>[
+            _deviceRow(deviceNo: 'P001', name: '设备A'),
+          ], total: 1, start: start, limit: limit);
         },
         onAdd: (data) async {
-          added = true;
           return _result(type: 'add', data: data);
         },
         onDelete: (deviceNo) async {
-          deleted = true;
           return _result(type: 'delete', deviceNo: deviceNo);
         },
       ),
@@ -131,11 +346,12 @@ void main() {
     await tester.tap(find.text('删除'));
     await tester.pumpAndSettle();
 
-    expect(listCalls, 3);
-    expect(find.text('暂无数据'), findsOneWidget);
+    expect(listCalls, 1);
+    expect(find.text('设备A'), findsOneWidget);
+    expect(find.text('设备B'), findsNothing);
   });
 
-  testWidgets('确认切换配置后重新加载列表', (tester) async {
+  testWidgets('确认切换配置后清空列表但不自动重新加载', (tester) async {
     const store = OnlineConfigStore();
     final custom = await store.create(
       url: 'https://example.com/sync',
@@ -146,11 +362,11 @@ void main() {
       tester,
       _app(
         configStore: store,
-        onList: () async {
+        onList: ({required start, required limit}) async {
           listCalls++;
           return _listResult(<Map<String, dynamic>>[
-            _deviceRow(deviceNo: 'P00$listCalls', name: '设备$listCalls'),
-          ]);
+            _deviceRow(deviceNo: 'P001', name: '设备1'),
+          ], total: 1, start: start, limit: limit);
         },
       ),
     );
@@ -162,8 +378,8 @@ void main() {
     await tester.tap(find.byKey(const Key('online-config-confirm')));
     await tester.pumpAndSettle();
 
-    expect(listCalls, 2);
-    expect(find.text('P002'), findsOneWidget);
+    expect(listCalls, 1);
+    expect(find.text('暂无数据'), findsOneWidget);
   });
 }
 
@@ -292,7 +508,7 @@ void _registerConfigTests() {
 
 /// 构造在线页测试所需的应用壳和可替换 API 回调。
 Widget _app({
-  Future<DeviceListResult> Function()? onList,
+  DeviceListCallback? onList,
   Future<DeviceResult> Function(String, Map<String, dynamic>)? onModify,
   Future<DeviceResult> Function(Map<String, dynamic>)? onAdd,
   Future<DeviceResult> Function(String)? onDelete,
@@ -315,16 +531,43 @@ Map<String, dynamic> _deviceRow({
   required String name,
 }) =>
     <String, dynamic>{
+      '归属部门': '设备部',
       '设备编号': deviceNo,
       '设备名称': name,
-      '状态': '正常使用',
+      '设备状态': '正常使用',
     };
 
-/// 构造网络层返回的列表业务结果。
-DeviceListResult _listResult(List<Map<String, dynamic>> rows) =>
+/// 构造一页连续设备编号的模拟线上数据。
+List<Map<String, dynamic>> _deviceRows(
+  String prefix,
+  int count, {
+  int offset = 0,
+}) =>
+    <Map<String, dynamic>>[
+      for (var index = 0; index < count; index++)
+        _deviceRow(
+          deviceNo: '$prefix${(offset + index).toString().padLeft(3, '0')}',
+          name: '设备${offset + index}',
+        ),
+    ];
+
+/// 构造网络层返回的一页列表业务结果。
+DeviceListResult _listResult(
+  List<Map<String, dynamic>> rows, {
+  required int total,
+  required int start,
+  required int limit,
+  bool hasMore = false,
+  int? nextStart,
+}) =>
     DeviceListResult.fromJson(<String, dynamic>{
       'success': true,
       'type': 'list',
+      'total': total,
+      'start': start,
+      'limit': limit,
+      'hasMore': hasMore,
+      if (nextStart != null) 'nextStart': nextStart,
       'rows': rows,
     });
 

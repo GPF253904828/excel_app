@@ -1,3 +1,5 @@
+// ignore_for_file: avoid_print
+
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 
@@ -11,23 +13,36 @@ class DeviceApi {
     required String webhook,
     required String token,
   }) async {
+    final requestBody = <String, dynamic>{
+      'Context': {'argv': argv},
+    };
+    final encodedRequestBody = jsonEncode(requestBody);
+    print('[DeviceApi][config] webhook=$webhook token=$token');
+    print(
+      '[DeviceApi][request] method=POST url=$webhook '
+      'headers={AirScript-Token: $token, Content-Type: application/json} '
+      'body=$encodedRequestBody',
+    );
+
     final resp = await http.post(
       Uri.parse(webhook),
       headers: {
         'AirScript-Token': token,
         'Content-Type': 'application/json',
       },
-      body: jsonEncode({
-        'Context': {'argv': argv},
-      }),
+      body: encodedRequestBody,
+    );
+    final responseBody = utf8.decode(resp.bodyBytes, allowMalformed: true);
+    print(
+      '[DeviceApi][response] status=${resp.statusCode} '
+      'headers=${resp.headers} body=$responseBody',
     );
 
     if (resp.statusCode != 200) {
-      throw DeviceApiException('HTTP ${resp.statusCode}: ${resp.body}');
+      throw DeviceApiException('HTTP ${resp.statusCode}: $responseBody');
     }
 
-    final json =
-        jsonDecode(utf8.decode(resp.bodyBytes)) as Map<String, dynamic>;
+    final json = jsonDecode(responseBody) as Map<String, dynamic>;
 
     // 脚本执行失败（语法错误、异常中断等）
     if ((json['status'] ?? '') != 'finished' || (json['error'] ?? '') != '') {
@@ -112,14 +127,22 @@ class DeviceApi {
     );
   }
 
-  /// 获取远端表格的全部设备行。
+  /// 获取远端表格的一页设备行，并返回分页状态。
   static Future<DeviceListResult> listDevices({
     required String webhook,
     required String token,
+    int start = 0,
+    int limit = 100,
+    bool includeEmpty = false,
   }) async {
     return DeviceListResult.fromJson(
       await _invokeRaw(
-        <String, dynamic>{'type': 'list'},
+        <String, dynamic>{
+          'type': 'list',
+          'start': start,
+          'limit': limit,
+          'includeEmpty': includeEmpty,
+        },
         webhook: webhook,
         token: token,
       ),
@@ -163,12 +186,22 @@ class DeviceListResult {
   final bool success;
   final String? type;
   final String? message;
+  final int? total;
+  final int? start;
+  final int? limit;
+  final int? nextStart;
+  final bool hasMore;
   final List<Map<String, dynamic>> rows;
 
   DeviceListResult._(this.raw)
       : success = raw['success'] == true,
         type = raw['type'] as String?,
         message = raw['message'] as String?,
+        total = (raw['total'] as num?)?.toInt(),
+        start = (raw['start'] as num?)?.toInt(),
+        limit = (raw['limit'] as num?)?.toInt(),
+        nextStart = (raw['nextStart'] as num?)?.toInt(),
+        hasMore = raw['hasMore'] == true,
         rows = <Map<String, dynamic>>[
           for (final row in raw['rows'] as List<dynamic>? ?? const [])
             if (row is Map) Map<String, dynamic>.from(row),

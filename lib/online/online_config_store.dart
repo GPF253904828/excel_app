@@ -5,9 +5,13 @@ import 'package:shared_preferences/shared_preferences.dart';
 /// 在线脚本接口的一条可选连接配置。
 class OnlineApiConfig {
   static const String builtInId = 'builtin';
+  // static const String builtInUrl =
+  //     'https://www.kdocs.cn/api/v3/ide/file/cjQJmvEX03n2/script/V2-7LfFuITpzY7ymzPf8OfNy7/sync_task';
+  //     static const String _builtInToken = '4UZv073cHuHyHkLy8WbLaU';// devices_list
+
   static const String builtInUrl =
-      'https://www.kdocs.cn/api/v3/ide/file/cjQJmvEX03n2/script/V2-7LfFuITpzY7ymzPf8OfNy7/sync_task';
-  static const String _builtInToken = '4UZv073cHuHyHkLy8WbLaU';
+      'https://www.kdocs.cn/api/v3/ide/file/cste8oq9q8tV/script/V2-1MN2hVWF6glpX9oyYehu67/sync_task';
+  static const String _builtInToken = '6zcFk06T2wY6zytCzmxHra'; // 丰台xxx
 
   final String id;
   final String url;
