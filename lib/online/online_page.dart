@@ -92,7 +92,7 @@ class OnlinePage extends StatefulWidget {
 }
 
 class _OnlinePageState extends State<OnlinePage> {
-  static const int _pageSize = 50;
+  static const int _pageSize = 100;
 
   OnlineApiConfig? _apiConfig;
   XlsTable? _table;

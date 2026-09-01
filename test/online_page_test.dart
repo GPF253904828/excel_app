@@ -231,7 +231,54 @@ void main() {
 
     expect(requestedStarts, <int>[0, 53]);
     expect(find.text('加载完毕'), findsOneWidget);
-    expect(find.text('已全部加载完成 51 条数据'), findsOneWidget);
+    expect(find.text('已全部加载完成51条数据'), findsOneWidget);
+  });
+
+  testWidgets('滚动触底时立即加载下一页，不等待手势结束', (tester) async {
+    final nextPage = Completer<DeviceListResult>();
+    final requestedStarts = <int>[];
+    addTearDown(() {
+      if (!nextPage.isCompleted) {
+        nextPage.complete(
+          _listResult(
+            const <Map<String, dynamic>>[],
+            total: 50,
+            start: 50,
+            limit: 50,
+          ),
+        );
+      }
+    });
+    await _pumpWidget(
+      tester,
+      _app(
+        onList: ({required start, required limit}) {
+          requestedStarts.add(start);
+          if (start == 50) return nextPage.future;
+          return Future<DeviceListResult>.value(
+            _listResult(
+              _deviceRows('P', 50),
+              total: 51,
+              start: start,
+              limit: limit,
+              hasMore: true,
+              nextStart: 50,
+            ),
+          );
+        },
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final list = find.byKey(const Key('spreadsheet-vertical-list'));
+    final gesture = await tester.startGesture(tester.getCenter(list));
+    for (var index = 0; index < 6; index++) {
+      await gesture.moveBy(const Offset(0, -1000));
+      await tester.pump(const Duration(milliseconds: 16));
+    }
+
+    expect(requestedStarts, <int>[0, 50]);
+    await gesture.up();
   });
 
   testWidgets('恰好 50 条且 hasMore 为 false 时不再加载下一页', (tester) async {
@@ -278,7 +325,32 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(find.text('已加载 50 / 共 120 条数据'), findsOneWidget);
+    expect(find.text('已加载50/120条数据'), findsOneWidget);
+  });
+
+  testWidgets('分页计数显示在 AppBar 的全宽底部区域', (tester) async {
+    await _pumpWidget(
+      tester,
+      _app(
+        onList: ({required start, required limit}) async => _listResult(
+          _deviceRows('P', 50),
+          total: 120,
+          start: start,
+          limit: limit,
+          hasMore: true,
+          nextStart: 50,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(
+      find.descendant(
+        of: find.byType(PreferredSize),
+        matching: find.text('已加载50/120条数据'),
+      ),
+      findsOneWidget,
+    );
   });
 
   testWidgets('修改成功后更新本地行但不重新加载线上列表', (tester) async {

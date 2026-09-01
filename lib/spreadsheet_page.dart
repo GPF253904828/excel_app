@@ -179,6 +179,8 @@ class SpreadsheetPage extends StatefulWidget {
 }
 
 class _SpreadsheetPageState extends State<SpreadsheetPage> {
+  static const double _loadMoreThreshold = 120;
+
   late List<String> _headers;
   late List<List<String>> _rows;
   late final ScrollController _horizontalController;
@@ -230,14 +232,13 @@ class _SpreadsheetPageState extends State<SpreadsheetPage> {
     }
   }
 
-  /// 仅响应用户垂直滚动到末尾的手势，横向滚动不触发分页。
+  /// 在用户滚动接近纵向列表底部时立即触发分页，横向滚动不触发。
   bool _handleScrollNotification(ScrollNotification notification) {
     final metrics = notification.metrics;
-    if (notification is ScrollEndNotification &&
-        notification.dragDetails != null &&
+    if (notification is ScrollUpdateNotification &&
         metrics.axis == Axis.vertical &&
         metrics.maxScrollExtent > 0 &&
-        metrics.pixels >= metrics.maxScrollExtent) {
+        metrics.extentAfter <= _loadMoreThreshold) {
       _loadMore();
     }
     return false;
@@ -432,30 +433,33 @@ class _SpreadsheetPageState extends State<SpreadsheetPage> {
 
     return Scaffold(
       appBar: AppBar(
-        toolbarHeight: 72,
-        title: Row(
-          children: [
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Text(
-                    widget.title ?? widget.file.uri.pathSegments.last,
-                    maxLines: 2,
-                    softWrap: true,
-                  ),
-                  Text(
-                    _dataCountText(),
-                    style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                          color: Theme.of(context).colorScheme.primary,
-                          fontWeight: FontWeight.w700,
-                        ),
-                  ),
-                ],
+        toolbarHeight: 56,
+        title: Text(
+          widget.title ?? widget.file.uri.pathSegments.last,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+        ),
+        bottom: PreferredSize(
+          preferredSize: const Size.fromHeight(30),
+          child: Container(
+            height: 30,
+            alignment: Alignment.centerLeft,
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: SizedBox(
+              width: double.infinity,
+              child: FittedBox(
+                fit: BoxFit.scaleDown,
+                alignment: Alignment.centerLeft,
+                child: Text(
+                  _dataCountText(),
+                  style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                        color: Theme.of(context).colorScheme.primary,
+                        fontWeight: FontWeight.w700,
+                      ),
+                ),
               ),
             ),
-          ],
+          ),
         ),
         actions: [
           ...widget.appBarActions,
@@ -545,7 +549,7 @@ class _SpreadsheetPageState extends State<SpreadsheetPage> {
   String _dataCountText() {
     final total = widget.totalCount;
     if (total == null) return '共 ${_rows.length} 条数据';
-    if (!widget.hasMore) return '已全部加载完成 $total 条数据';
+    if (!widget.hasMore) return '已全部加载完成$total条数据';
     return '已加载${_rows.length}/$total条数据';
   }
 
