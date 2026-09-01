@@ -39,6 +39,28 @@ Future<bool> _hasBrandYellowPixel(ui.Image image) async {
   return false;
 }
 
+/// 判断右下品牌文字区域是否仍包含深色文字像素。
+Future<bool> _hasCompanyTextPixel(ui.Image image) async {
+  final bytes = await image.toByteData(format: ui.ImageByteFormat.rawRgba);
+  if (bytes == null) return false;
+
+  final startX = (image.width * .39).floor();
+  final endX = (image.width * .98).floor();
+  final startY = (image.height * .80).floor();
+  final endY = (image.height * .95).floor();
+  for (var y = startY; y < endY; y++) {
+    for (var x = startX; x < endX; x++) {
+      final offset = (y * image.width + x) * 4;
+      if (bytes.getUint8(offset) < 220 &&
+          bytes.getUint8(offset + 1) < 220 &&
+          bytes.getUint8(offset + 2) < 220) {
+        return true;
+      }
+    }
+  }
+  return false;
+}
+
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
@@ -107,7 +129,7 @@ void main() {
     }
   });
 
-  test('uses the compact horizontal layout in generated PNGs', () async {
+  test('uses the high-resolution compact layout in generated PNGs', () async {
     final directory = await Directory.systemTemp.createTemp('qr_layout_test_');
     final service = QrCodeService(directory);
 
@@ -118,8 +140,27 @@ void main() {
       );
       final frame = await codec.getNextFrame();
 
-      expect(frame.image.width, 640);
-      expect(frame.image.height, 270);
+      expect(frame.image.width, 1280);
+      expect(frame.image.height, 520);
+      frame.image.dispose();
+      codec.dispose();
+    } finally {
+      await directory.delete(recursive: true);
+    }
+  });
+
+  test('omits the company name from generated QR PNGs', () async {
+    final directory = await Directory.systemTemp.createTemp('qr_company_test_');
+    final service = QrCodeService(directory);
+
+    try {
+      final files = await service.generate(const [QrDevice('P001', '设备A')]);
+      final codec = await ui.instantiateImageCodec(
+        await files.single.readAsBytes(),
+      );
+      final frame = await codec.getNextFrame();
+
+      expect(await _hasCompanyTextPixel(frame.image), isFalse);
       frame.image.dispose();
       codec.dispose();
     } finally {

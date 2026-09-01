@@ -108,16 +108,18 @@ class QrCodeService {
     return Uint8List.fromList(encoded);
   }
 
-  /// 使用 qr_flutter 绘制紧凑双栏二维码，并合成设备信息与公司名称。
+  /// 使用 qr_flutter 绘制高分辨率紧凑双栏二维码，并合成设备信息。
   Future<Uint8List> _renderPng(QrDevice device) async {
-    const width = 640.0;
-    const height = 260.0;
+    const imageScale = 2.0;
+    const width = 1280.0;
+    const height = 520.0;
     const qrOffset = Offset(30, 24);
     const qrSize = 172.0;
     final brandMark = await _loadBrandMark();
     final recorder = ui.PictureRecorder();
     final canvas = Canvas(recorder);
     canvas.drawColor(Colors.white, BlendMode.src);
+    canvas.scale(imageScale);
 
     canvas.save();
     canvas.translate(qrOffset.dx, qrOffset.dy);
@@ -129,7 +131,7 @@ class QrCodeService {
     ).paint(canvas, const Size(qrSize, qrSize));
     canvas.restore();
     _paintBrandMark(canvas, brandMark, qrOffset, qrSize);
-    var offsetY = 12.0;
+    var offsetY = 2.0;
     _paintDeviceInfo(
       canvas,
       '设备编号',
@@ -156,18 +158,6 @@ class QrCodeService {
       maxWidth: qrSize,
       textAlign: TextAlign.center,
     );
-    _paintText(
-      canvas,
-      '北京雅康博生物科技有限公司',
-      Offset(250, 226 - offsetY),
-      style: const TextStyle(
-        color: Colors.black54,
-        fontSize: 14,
-        height: 1.2,
-      ),
-      maxWidth: 360,
-    );
-
     final picture = recorder.endRecording();
     final image = await picture.toImage(width.toInt(), height.toInt());
     final data = await image.toByteData(format: ui.ImageByteFormat.png);
@@ -180,12 +170,12 @@ class QrCodeService {
   /// 缓存并解码二维码中心使用的官方品牌标识。
   Future<ui.Image> _loadBrandMark() => _brandMarkFuture ??= _decodeBrandMark();
 
-  /// 将官方完整 Logo 解码为适合二维码中心区域的位图。
+  /// 将官方完整 Logo 解码为匹配高分辨率输出的中心位图。
   Future<ui.Image> _decodeBrandMark() async {
     final data = await rootBundle.load('assets/branding/acbio_logo.png');
     final codec = await ui.instantiateImageCodec(
       data.buffer.asUint8List(),
-      targetHeight: 28,
+      targetHeight: 56,
     );
     final frame = await codec.getNextFrame();
     codec.dispose();
