@@ -153,7 +153,7 @@ class QrCodeService {
     );
     _paintText(
       canvas,
-      '其他信息请扫描查看',
+      '其他信息请扫码查看',
       const Offset(48, 207),
       style: const TextStyle(
         color: Colors.black54,
