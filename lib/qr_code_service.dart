@@ -77,12 +77,7 @@ class QrCodeService {
 
   /// 清理旧图片并为设备记录生成新的 PNG 文件。
   Future<List<File>> generate(List<QrDevice> devices) async {
-    await outputDirectory.create(recursive: true);
-    for (final entity in outputDirectory.listSync()) {
-      if (entity is File && entity.path.toLowerCase().endsWith('.png')) {
-        await entity.delete();
-      }
-    }
+    await clear();
 
     final usedNames = <String>{};
     final files = <File>[];
@@ -93,6 +88,16 @@ class QrCodeService {
       files.add(file);
     }
     return files;
+  }
+
+  /// 删除输出目录中已有的二维码 PNG，保留目录内的其他文件。
+  Future<void> clear() async {
+    await outputDirectory.create(recursive: true);
+    for (final entity in outputDirectory.listSync()) {
+      if (entity is File && entity.path.toLowerCase().endsWith('.png')) {
+        await entity.delete();
+      }
+    }
   }
 
   /// 将最近生成的 PNG 文件压缩为 ZIP 字节流。
@@ -110,9 +115,9 @@ class QrCodeService {
 
   /// 使用 qr_flutter 绘制高分辨率紧凑双栏二维码，并合成设备信息。
   Future<Uint8List> _renderPng(QrDevice device) async {
-    const imageScale = 2.0;
-    const width = 1280.0;
-    const height = 520.0;
+    const imageScale = 3.0;
+    const width = 1920.0;
+    const height = 738.0;
     const qrOffset = Offset(30, 24);
     const qrSize = 172.0;
     final brandMark = await _loadBrandMark();
@@ -152,7 +157,7 @@ class QrCodeService {
       const Offset(48, 207),
       style: const TextStyle(
         color: Colors.black54,
-        fontSize: 14,
+        fontSize: 15,
         height: 1.2,
       ),
       maxWidth: qrSize,
@@ -175,7 +180,7 @@ class QrCodeService {
     final data = await rootBundle.load('assets/branding/acbio_logo.png');
     final codec = await ui.instantiateImageCodec(
       data.buffer.asUint8List(),
-      targetHeight: 56,
+      targetHeight: 168,
     );
     final frame = await codec.getNextFrame();
     codec.dispose();
@@ -229,7 +234,7 @@ class QrCodeService {
       offset,
       style: const TextStyle(
         color: Colors.black54,
-        fontSize: 13,
+        fontSize: 15,
         height: 1.2,
       ),
       maxWidth: maxWidth,
@@ -237,11 +242,11 @@ class QrCodeService {
     _paintText(
       canvas,
       value,
-      Offset(offset.dx, offset.dy + 20),
+      Offset(offset.dx, offset.dy + 22),
       style: const TextStyle(
         color: Colors.black,
         fontSize: 20,
-        fontWeight: FontWeight.w500,
+        fontWeight: FontWeight.w600,
         height: 1.2,
       ),
       maxWidth: maxWidth,

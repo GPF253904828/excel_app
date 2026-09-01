@@ -61,6 +61,28 @@ Future<bool> _hasCompanyTextPixel(ui.Image image) async {
   return false;
 }
 
+/// 返回 PNG 中最上和最下的非白色内容行，用于校验垂直留白。
+Future<List<int>> _contentRowBounds(ui.Image image) async {
+  final bytes = await image.toByteData(format: ui.ImageByteFormat.rawRgba);
+  if (bytes == null) return [];
+
+  var first = image.height;
+  var last = -1;
+  for (var y = 0; y < image.height; y++) {
+    for (var x = 0; x < image.width; x++) {
+      final offset = (y * image.width + x) * 4;
+      if (bytes.getUint8(offset) < 245 ||
+          bytes.getUint8(offset + 1) < 245 ||
+          bytes.getUint8(offset + 2) < 245) {
+        first = first < y ? first : y;
+        last = last > y ? last : y;
+        break;
+      }
+    }
+  }
+  return [first, last];
+}
+
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
@@ -140,8 +162,31 @@ void main() {
       );
       final frame = await codec.getNextFrame();
 
-      expect(frame.image.width, 1280);
-      expect(frame.image.height, 520);
+      expect(frame.image.width, 1920);
+      expect(frame.image.height, 738);
+      frame.image.dispose();
+      codec.dispose();
+    } finally {
+      await directory.delete(recursive: true);
+    }
+  });
+
+  test('keeps equal top and bottom content padding in generated QR PNGs',
+      () async {
+    final directory = await Directory.systemTemp.createTemp('qr_padding_test_');
+    final service = QrCodeService(directory);
+
+    try {
+      final files = await service.generate(const [QrDevice('P001', '设备A')]);
+      final codec = await ui.instantiateImageCodec(
+        await files.single.readAsBytes(),
+      );
+      final frame = await codec.getNextFrame();
+      final bounds = await _contentRowBounds(frame.image);
+      final topPadding = bounds.first;
+      final bottomPadding = frame.image.height - 1 - bounds.last;
+
+      expect(topPadding, closeTo(bottomPadding, 4));
       frame.image.dispose();
       codec.dispose();
     } finally {

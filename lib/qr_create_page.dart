@@ -35,16 +35,20 @@ class QrCreatePage extends StatefulWidget {
 class _QrCreatePageState extends State<QrCreatePage> {
   late final List<QrDevice> _devices;
   late final List<bool> _selected;
+  late final Future<void> _initialCleanup;
   List<File>? _generatedFiles;
   List<QrDevice>? _generatedDevices;
   String _status = '';
   bool _busy = false;
+  bool _initialCleanupPending = true;
+  bool _generationQueued = false;
 
   @override
   void initState() {
     super.initState();
     _devices = extractQrDevices(widget.headers, widget.rows);
     _selected = List<bool>.filled(_devices.length, true);
+    _initialCleanup = _clearExistingQrFiles();
   }
 
   /// 返回当前选中的设备记录。
@@ -96,9 +100,39 @@ class _QrCreatePageState extends State<QrCreatePage> {
     return QrCodeService(Directory('${appDirectory.path}/二维码合计'));
   }
 
+  /// 页面打开时优先清理上次生成的二维码，避免旧文件被误导出。
+  Future<void> _clearExistingQrFiles() async {
+    setState(() {
+      _busy = true;
+      _status = '正在清理旧二维码';
+    });
+    try {
+      await (await _getService()).clear();
+      if (!mounted) return;
+      setState(() => _status = '');
+    } catch (error) {
+      if (!mounted) return;
+      setState(() => _status = '失败: $error');
+    } finally {
+      if (mounted) {
+        setState(() {
+          _busy = false;
+          _initialCleanupPending = false;
+        });
+      }
+    }
+  }
+
   /// 生成当前选中设备的二维码图片。
   Future<void> _generate() async {
-    if (_busy) return;
+    if (_busy && !_initialCleanupPending) return;
+    if (_initialCleanupPending) {
+      if (_generationQueued) return;
+      _generationQueued = true;
+      await _initialCleanup;
+      _generationQueued = false;
+      if (!mounted || _busy) return;
+    }
     final devices = _selectedDevices;
     if (devices.isEmpty) {
       setState(() => _status = '请至少选择一条设备数据');
@@ -326,7 +360,8 @@ class _QrCreatePageState extends State<QrCreatePage> {
                 mainAxisAlignment: MainAxisAlignment.end,
                 children: [
                   FilledButton.icon(
-                    onPressed: _busy ? null : _generate,
+                    onPressed:
+                        _busy && !_initialCleanupPending ? null : _generate,
                     icon: const Icon(Icons.qr_code),
                     label: const Text('生成'),
                   ),
