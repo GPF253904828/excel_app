@@ -1,9 +1,11 @@
 import 'dart:async';
 
+import 'package:excel_app/device_detail_page.dart';
 import 'package:excel_app/device_edit_page.dart';
 import 'package:excel_app/online/online_config_page.dart';
 import 'package:excel_app/online/online_config_store.dart';
 import 'package:excel_app/online/online_page.dart';
+import 'package:excel_app/qr_create_page.dart';
 import 'package:excel_app/utils/net_util.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -453,6 +455,63 @@ void main() {
     expect(listCalls, 1);
     expect(find.text('暂无数据'), findsOneWidget);
   });
+
+  testWidgets('read-only online list opens details without editing actions',
+      (tester) async {
+    await _pumpWidget(
+      tester,
+      _app(
+        readOnly: true,
+        onList: ({required start, required limit}) async => _listResult(
+          <Map<String, dynamic>>[
+            <String, dynamic>{
+              '设备编号': 'P001',
+              '设备名称': '设备A',
+              '设备状态': '正常使用',
+              '计量日期': '2026-09-01',
+            },
+          ],
+          total: 1,
+          start: start,
+          limit: limit,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.byTooltip('新增一行'), findsNothing);
+    expect(find.byTooltip('生成二维码'), findsNothing);
+    expect(find.byTooltip('扫码二维码'), findsNothing);
+    await tester.tap(find.text('P001'));
+    await tester.pumpAndSettle();
+    expect(find.byType(DeviceDetailPage), findsOneWidget);
+    expect(find.text('2026-09-01'), findsOneWidget);
+    expect(find.byType(DeviceEditPage), findsNothing);
+  });
+
+  testWidgets('read-only online list keeps QR export but hides API settings',
+      (tester) async {
+    await _pumpWidget(
+      tester,
+      _app(
+        readOnly: true,
+        qrExportPageBuilder: (archive, filename) => const Placeholder(),
+        onList: ({required start, required limit}) async => _listResult(
+          <Map<String, dynamic>>[
+            _deviceRow(deviceNo: 'P001', name: '设备A'),
+          ],
+          total: 1,
+          start: start,
+          limit: limit,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const Key('online-config')), findsNothing);
+    expect(find.byTooltip('刷新列表'), findsOneWidget);
+    expect(find.byTooltip('生成二维码'), findsOneWidget);
+  });
 }
 
 /// 验证在线接口配置列表的迁移、内置保护和选择流程。
@@ -585,6 +644,8 @@ Widget _app({
   Future<DeviceResult> Function(Map<String, dynamic>)? onAdd,
   Future<DeviceResult> Function(String)? onDelete,
   OnlineConfigStore configStore = const OnlineConfigStore(),
+  bool readOnly = false,
+  QrExportPageBuilder? qrExportPageBuilder,
 }) {
   return MaterialApp(
     home: OnlinePage(
@@ -593,6 +654,8 @@ Widget _app({
       onAdd: onAdd,
       onDelete: onDelete,
       configStore: configStore,
+      readOnly: readOnly,
+      qrExportPageBuilder: qrExportPageBuilder,
     ),
   );
 }

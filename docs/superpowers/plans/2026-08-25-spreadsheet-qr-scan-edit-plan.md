@@ -2,7 +2,7 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** 在移动端表格页通过相机扫描设备二维码，定位并编辑对应设备，或通过统一编辑页新增设备，保存成功后立即更新外部列表。
+**Goal:** 在移动端表格页通过相机扫码设备二维码，定位并编辑对应设备，或通过统一编辑页新增设备，保存成功后立即更新外部列表。
 
 **Architecture:** `ScannerPage` 只负责相机和返回二维码文本；`DeviceEditPage` 负责动态表单、设备编码二次确认和保存状态；`SpreadsheetPage` 负责查找行、构造候选表格、调用现有 `onSave` 回调，并在外部保存成功后替换或追加本地行。现有二维码生成文件和导出流程保持不变。
 
@@ -12,7 +12,7 @@
 
 ## File Map
 
-- Create `lib/scanner_page.dart`: 相机预览、首个有效二维码结果、扫描错误展示和页面返回。
+- Create `lib/scanner_page.dart`: 相机预览、首个有效二维码结果、扫码错误展示和页面返回。
 - Create `lib/device_edit_page.dart`: 动态设备字段表单、已有设备编码只读/二次确认、保存回调和输入生命周期。
 - Modify `lib/spreadsheet_page.dart`: 扫码入口、统一编辑页入口、设备编号查找、行替换/追加和保存失败处理；删除旧的单元格编辑弹窗逻辑。
 - Modify `pubspec.yaml`: 固定 `mobile_scanner` 版本为 `^3.5.7`，保留当前已有依赖。
@@ -57,7 +57,7 @@ Add this key inside the main `<dict>` in `ios/Runner/Info.plist`:
 
 ```xml
 <key>NSCameraUsageDescription</key>
-<string>使用相机扫描设备二维码</string>
+<string>使用相机扫码设备二维码</string>
 ```
 
 - [ ] **Step 4: Resolve dependencies and verify the platform files.**
@@ -314,7 +314,7 @@ Expected: existing legacy tests may pass, while the new tests fail because the t
 
 - [ ] **Step 3: Add row lookup and editor/scanner routes.**
 
-Import `device_edit_page.dart` and `scanner_page.dart`. Replace `_addRow` with an async method that opens `DeviceEditPage` using an all-empty row and `isNew: true`. Add a QR toolbar `IconButton` with tooltip `扫描二维码`; it pushes `ScannerPage`, checks the returned code, uses `findDeviceRowIndex`, and opens the matched row with `isNew: false`. If `设备编号` is absent, show `表格中没有设备编号列`; if no row matches, show `未找到设备编号：<code>`.
+Import `device_edit_page.dart` and `scanner_page.dart`. Replace `_addRow` with an async method that opens `DeviceEditPage` using an all-empty row and `isNew: true`. Add a QR toolbar `IconButton` with tooltip `扫码二维码`; it pushes `ScannerPage`, checks the returned code, uses `findDeviceRowIndex`, and opens the matched row with `isNew: false`. If `设备编号` is absent, show `表格中没有设备编号列`; if no row matches, show `未找到设备编号：<code>`.
 
 Use one private method for opening any editor. Its save callback creates a candidate copy of `_rows`, replaces the target index or appends the new row, awaits `widget.onSave(XlsTable(headers: copy of _headers, rows: candidate))`, and only after success copies the candidate into `_rows`, shows `已保存，等待电脑接收`, and lets `DeviceEditPage` pop. On failure, do not mutate `_rows`; rethrow so `DeviceEditPage` alone shows `保存失败: <error>` and keeps the form open. Guard all async completion points with `mounted`.
 
@@ -379,4 +379,4 @@ Expected: the build succeeds and the generated manifest contains camera permissi
 
 - [ ] **Step 4: Perform a device smoke test for the camera permission flow.**
 
-On an Android or iOS device, open a received spreadsheet, tap `扫描二维码`, accept the camera permission, scan a known device code, verify the matching row opens with all fields, edit a non-code field, save, and confirm the external download receives the updated list. Repeat with an unknown code and with a denied permission to verify the two error paths.
+On an Android or iOS device, open a received spreadsheet, tap `扫码二维码`, accept the camera permission, scan a known device code, verify the matching row opens with all fields, edit a non-code field, save, and confirm the external download receives the updated list. Repeat with an unknown code and with a denied permission to verify the two error paths.

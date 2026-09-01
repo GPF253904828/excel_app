@@ -57,7 +57,7 @@ class HomePageController extends ChangeNotifier {
     }
   }
 
-  /// 重新扫描保存目录并更新按钮状态。
+  /// 重新扫码保存目录并更新按钮状态。
   void refreshFiles() {
     _hasFiles = receivedFiles.isNotEmpty;
     _notifyListeners();

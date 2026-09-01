@@ -166,7 +166,7 @@ void main() {
       onSave: (_) async {},
     ));
 
-    await tester.tap(find.byTooltip('扫描二维码'));
+    await tester.tap(find.byTooltip('扫码二维码'));
     await tester.pumpAndSettle();
     final scanner = tester.widget<MobileScanner>(find.byType(MobileScanner));
     scanner.onDetect(
@@ -191,7 +191,7 @@ void main() {
       onSave: (_) async {},
     ));
 
-    await tester.tap(find.byTooltip('扫描二维码'));
+    await tester.tap(find.byTooltip('扫码二维码'));
     await tester.pumpAndSettle();
     tester.widget<MobileScanner>(find.byType(MobileScanner)).onDetect(
           BarcodeCapture(barcodes: [const Barcode(rawValue: ' P001 ')]),
@@ -215,7 +215,7 @@ void main() {
       onSave: (_) async {},
     ));
 
-    await tester.tap(find.byTooltip('扫描二维码'));
+    await tester.tap(find.byTooltip('扫码二维码'));
     await tester.pumpAndSettle();
     expect(find.byType(ScannerPage), findsNothing);
     expect(find.text('共 1 条数据'), findsOneWidget);
@@ -303,6 +303,34 @@ void main() {
     expect(deletedIndex, 0);
     expect(find.text('暂无数据'), findsOneWidget);
   });
+
+  testWidgets(
+      'read-only table hides editing controls and opens its view callback',
+      (tester) async {
+    List<String>? viewedHeaders;
+    List<String>? viewedRow;
+    await tester.pumpWidget(_spreadsheetApp(
+      table: XlsTable(
+        headers: const ['设备编号', '计量日期'],
+        rows: const [
+          ['P001', '2026-09-01'],
+        ],
+      ),
+      readOnly: true,
+      onViewRow: (headers, row) async {
+        viewedHeaders = headers;
+        viewedRow = row;
+      },
+    ));
+
+    expect(find.byTooltip('新增一行'), findsNothing);
+    expect(find.byTooltip('生成二维码'), findsNothing);
+    expect(find.byTooltip('扫码二维码'), findsNothing);
+    await tester.tap(find.text('P001'));
+    await tester.pump();
+    expect(viewedHeaders, ['设备编号', '计量日期']);
+    expect(viewedRow, ['P001', '2026-09-01']);
+  });
 }
 
 /// 构造表格页面测试所需的最小应用壳。
@@ -311,6 +339,8 @@ Widget _spreadsheetApp({
   Future<void> Function(XlsTable table)? onSave,
   Future<XlsTable> Function(int? rowIndex, List<String> row)? onSaveRow,
   Future<XlsTable> Function(int rowIndex, List<String> row)? onDeleteRow,
+  bool readOnly = false,
+  Future<void> Function(List<String> headers, List<String> row)? onViewRow,
 }) {
   return MaterialApp(
     home: SpreadsheetPage(
@@ -319,6 +349,8 @@ Widget _spreadsheetApp({
       onSave: onSave,
       onSaveRow: onSaveRow,
       onDeleteRow: onDeleteRow,
+      readOnly: readOnly,
+      onViewRow: onViewRow,
     ),
   );
 }

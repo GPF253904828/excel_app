@@ -3,7 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 
-/// 返回扫描结果中第一个去除首尾空白后的有效原始值。
+/// 返回扫码结果中第一个去除首尾空白后的有效原始值。
 String? firstScanValue(BarcodeCapture capture) {
   for (final barcode in capture.barcodes) {
     final value = barcode.rawValue?.trim();
@@ -12,7 +12,7 @@ String? firstScanValue(BarcodeCapture capture) {
   return null;
 }
 
-/// 提供设备二维码扫描页面，并将首个有效编码返回给调用方。
+/// 提供设备二维码扫码页面，并将首个有效编码返回给调用方。
 class ScannerPage extends StatefulWidget {
   const ScannerPage({super.key});
 
@@ -34,7 +34,7 @@ class _ScannerPageState extends State<ScannerPage> {
     if (!_startupCompleted.isCompleted) _startupCompleted.complete();
   }
 
-  /// 停止扫描并只执行一次返回，可选地携带扫描结果。
+  /// 停止扫码并只执行一次返回，可选地携带扫码结果。
   Future<void> _finish([String? value]) async {
     if (_completed) return;
     _completed = true;
@@ -51,7 +51,7 @@ class _ScannerPageState extends State<ScannerPage> {
     Navigator.pop(context, value);
   }
 
-  /// 处理扫描事件，只接受首个有效编码并结束相机扫描。
+  /// 处理扫码事件，只接受首个有效编码并结束相机扫码。
   Future<void> _handleDetection(BarcodeCapture capture) async {
     if (_completed) return;
 
@@ -90,7 +90,7 @@ class _ScannerPageState extends State<ScannerPage> {
     );
   }
 
-  /// 返回上一页，不带扫描结果。
+  /// 返回上一页，不带扫码结果。
   Future<void> _cancel() => _finish();
 
   /// 拦截系统返回，确保它与按钮和扫码成功共用同一退出流程。
@@ -106,7 +106,7 @@ class _ScannerPageState extends State<ScannerPage> {
       onWillPop: _handleWillPop,
       child: Scaffold(
         appBar: AppBar(
-          title: const Text('扫描设备编码'),
+          title: const Text('扫码设备编码'),
         ),
         body: Stack(
           fit: StackFit.expand,

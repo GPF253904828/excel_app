@@ -14,7 +14,8 @@ void main() {
     await tester.pumpWidget(const MaterialApp(home: HomePage()));
 
     expect(find.text('大厅'), findsOneWidget);
-    expect(find.text('在线'), findsOneWidget);
+    expect(find.text('在线扫码'), findsOneWidget);
+    expect(find.text('在线查看全部'), findsOneWidget);
     expect(find.text('本地'), findsOneWidget);
   });
 }

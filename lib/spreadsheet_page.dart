@@ -26,6 +26,12 @@ typedef SpreadsheetRowDeleteCallback = Future<XlsTable> Function(
 /// 表格下拉刷新或触底加载更多时执行的异步回调。
 typedef SpreadsheetPageLoadCallback = Future<void> Function();
 
+/// 只读表格点击一行后接收字段和数据的回调。
+typedef SpreadsheetRowViewCallback = Future<void> Function(
+  List<String> headers,
+  List<String> row,
+);
+
 bool _isNormalStatus(String status) => status == '正常使用' || status == '正常';
 bool _isRepairStatus(String status) => status == '维修中' || status == '维修';
 
@@ -150,9 +156,11 @@ class SpreadsheetPage extends StatefulWidget {
   final bool hasMore;
   final int? totalCount;
   final bool isLoading;
+  final bool readOnly;
   final String? title;
   final List<Widget> appBarActions;
   final QrExportPageBuilder? qrExportPageBuilder;
+  final SpreadsheetRowViewCallback? onViewRow;
   final Future<void> Function(Uint8List bytes, String filename)?
       onExportQrCodes;
 
@@ -168,9 +176,11 @@ class SpreadsheetPage extends StatefulWidget {
     this.hasMore = false,
     this.totalCount,
     this.isLoading = false,
+    this.readOnly = false,
     this.title,
     this.appBarActions = const <Widget>[],
     this.qrExportPageBuilder,
+    this.onViewRow,
     this.onExportQrCodes,
   });
 
@@ -247,7 +257,21 @@ class _SpreadsheetPageState extends State<SpreadsheetPage> {
   /// 打开新增行编辑页，只有保存成功后才追加到当前列表。
   Future<void> _addRow() => _openEditor();
 
-  /// 打开相机扫描设备编号，并进入匹配行的编辑页。
+  /// 根据页面模式打开只读详情或现有编辑页。
+  Future<void> _openRow(int rowIndex) async {
+    if (!widget.readOnly) {
+      await _openEditor(rowIndex: rowIndex);
+      return;
+    }
+    final onViewRow = widget.onViewRow;
+    if (onViewRow == null) return;
+    await onViewRow(
+      List<String>.from(_headers),
+      List<String>.from(_rows[rowIndex]),
+    );
+  }
+
+  /// 打开相机扫码设备编号，并进入匹配行的编辑页。
   Future<void> _scanRow() async {
     if (!_headers.contains('设备编号')) {
       ToastUtil.showCenter('表格中没有设备编号列');
@@ -463,49 +487,56 @@ class _SpreadsheetPageState extends State<SpreadsheetPage> {
         ),
         actions: [
           ...widget.appBarActions,
-          IconButton(
-            tooltip: '新增一行',
-            onPressed: _addRow,
-            color: colors.onSurfaceVariant,
-            icon: const Icon(Icons.add),
-          ),
-          IconButton(
-            tooltip: '生成二维码',
-            onPressed: _openQrCreatePage,
-            color: colors.onSurfaceVariant,
-            icon: const Icon(Icons.qr_code_2),
-          ),
-          const SizedBox(width: 8),
+          if (!widget.readOnly) ...[
+            IconButton(
+              tooltip: '新增一行',
+              onPressed: _addRow,
+              color: colors.onSurfaceVariant,
+              icon: const Icon(Icons.add),
+            ),
+            const SizedBox(width: 8),
+          ],
+          if (!widget.readOnly ||
+              widget.qrExportPageBuilder != null ||
+              widget.onExportQrCodes != null)
+            IconButton(
+              tooltip: '生成二维码',
+              onPressed: _openQrCreatePage,
+              color: colors.onSurfaceVariant,
+              icon: const Icon(Icons.qr_code_2),
+            ),
         ],
       ),
-      floatingActionButton: SafeArea(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.end,
-          children: [
-            FloatingActionButton.small(
-              heroTag: 'scan-row',
-              tooltip: '扫描二维码',
-              onPressed: _scanRow,
-              child: const Icon(Icons.document_scanner_outlined),
-            ),
-            const SizedBox(height: 12),
-            if (widget.onSave != null && widget.onSaveRow == null)
-              FloatingActionButton.small(
-                heroTag: 'save-table',
-                tooltip: '保存',
-                onPressed: _saving ? null : _save,
-                child: _saving
-                    ? const SizedBox(
-                        width: 18,
-                        height: 18,
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      )
-                    : const Icon(Icons.save_outlined),
+      floatingActionButton: widget.readOnly
+          ? null
+          : SafeArea(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  FloatingActionButton.small(
+                    heroTag: 'scan-row',
+                    tooltip: '扫码二维码',
+                    onPressed: _scanRow,
+                    child: const Icon(Icons.document_scanner_outlined),
+                  ),
+                  const SizedBox(height: 12),
+                  if (widget.onSave != null && widget.onSaveRow == null)
+                    FloatingActionButton.small(
+                      heroTag: 'save-table',
+                      tooltip: '保存',
+                      onPressed: _saving ? null : _save,
+                      child: _saving
+                          ? const SizedBox(
+                              width: 18,
+                              height: 18,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            )
+                          : const Icon(Icons.save_outlined),
+                    ),
+                ],
               ),
-          ],
-        ),
-      ),
+            ),
       body: Stack(
         children: <Widget>[
           SafeArea(
@@ -664,8 +695,10 @@ class _SpreadsheetPageState extends State<SpreadsheetPage> {
       child: Material(
         color: Colors.white,
         child: InkWell(
-          onTap: () => _openEditor(rowIndex: rowIndex),
-          onLongPress: () => _deleteRow(rowIndex),
+          onTap: widget.readOnly && widget.onViewRow == null
+              ? null
+              : () => _openRow(rowIndex),
+          onLongPress: widget.readOnly ? null : () => _deleteRow(rowIndex),
           child: Table(
             columnWidths: _columnWidths(widths),
             children: [

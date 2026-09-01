@@ -2,6 +2,7 @@
 
 import 'dart:io';
 
+import 'package:excel_app/device_detail_page.dart';
 import 'package:excel_app/network_tools/xls_reader.dart';
 import 'package:excel_app/online/online_config_page.dart';
 import 'package:excel_app/online/online_config_store.dart';
@@ -76,6 +77,7 @@ class OnlinePage extends StatefulWidget {
   final DeviceDeleteCallback? onDelete;
   final QrExportPageBuilder? qrExportPageBuilder;
   final OnlineConfigStore configStore;
+  final bool readOnly;
 
   const OnlinePage({
     super.key,
@@ -85,6 +87,7 @@ class OnlinePage extends StatefulWidget {
     this.onDelete,
     this.qrExportPageBuilder,
     this.configStore = const OnlineConfigStore(),
+    this.readOnly = false,
   });
 
   @override
@@ -390,6 +393,21 @@ class _OnlinePageState extends State<OnlinePage> {
     return table;
   }
 
+  /// 将只读表格行转换为字段映射并打开设备详情页。
+  Future<void> _openReadOnlyDetail(
+    List<String> headers,
+    List<String> row,
+  ) async {
+    final data = <String, dynamic>{
+      for (var index = 0; index < headers.length; index++)
+        headers[index]: index < row.length ? row[index] : '',
+    };
+    await Navigator.push<void>(
+      context,
+      MaterialPageRoute(builder: (_) => DeviceDetailPage(data: data)),
+    );
+  }
+
   /// 将业务或传输异常转换为页面可读消息。
   String _errorText(Object error) {
     if (error is DeviceApiException) return error.message;
@@ -398,12 +416,13 @@ class _OnlinePageState extends State<OnlinePage> {
 
   /// 创建在线表格使用的统一工具栏操作。
   List<Widget> _tableActions() => <Widget>[
-        IconButton(
-          key: const Key('online-config'),
-          onPressed: _loading || _loadingMore ? null : _openConfig,
-          tooltip: '接口配置',
-          icon: const Icon(Icons.settings_outlined),
-        ),
+        if (!widget.readOnly)
+          IconButton(
+            key: const Key('online-config'),
+            onPressed: _loading || _loadingMore ? null : _openConfig,
+            tooltip: '接口配置',
+            icon: const Icon(Icons.settings_outlined),
+          ),
         IconButton(
           key: const Key('online-refresh'),
           onPressed: _loading || _loadingMore ? null : _refresh,
@@ -447,13 +466,15 @@ class _OnlinePageState extends State<OnlinePage> {
       table: table,
       title: '在线设备',
       appBarActions: _tableActions(),
-      onSaveRow: _saveRemoteRow,
-      onDeleteRow: _deleteRemoteRow,
+      onSaveRow: widget.readOnly ? null : _saveRemoteRow,
+      onDeleteRow: widget.readOnly ? null : _deleteRemoteRow,
       onRefresh: _refresh,
       onLoadMore: _loadMore,
       hasMore: _hasMore,
       totalCount: _total,
       isLoading: _loading || _loadingMore,
+      readOnly: widget.readOnly,
+      onViewRow: widget.readOnly ? _openReadOnlyDetail : null,
       qrExportPageBuilder: widget.qrExportPageBuilder,
     );
   }
