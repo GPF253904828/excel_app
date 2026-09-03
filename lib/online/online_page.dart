@@ -189,7 +189,6 @@ class _OnlinePageState extends State<OnlinePage> {
     AppLog.info('[Online][refresh] start');
     try {
       await _loadFirstPage();
-      AppLog.info('[Online][refresh] completed');
     } catch (error) {
       AppLog.error('[Online][refresh][error] $error');
       if (mounted) ToastUtil.showCenter(_errorText(error));
@@ -290,7 +289,7 @@ class _OnlinePageState extends State<OnlinePage> {
       });
       WidgetsBinding.instance.scheduleFrame();
     } catch (error) {
-      print('[Online][guide][error] $error');
+      AppLog.error('[Online][guide][error] $error');
     }
   }
 
@@ -344,7 +343,7 @@ class _OnlinePageState extends State<OnlinePage> {
       }
       if (mounted) setState(() => _paginationStatus = null);
     } catch (error) {
-      print('[Online][load-all][error] $error');
+      AppLog.error('[Online][load-all][error] $error');
       if (mounted) {
         setState(() => _paginationStatus = '加载失败: ${_errorText(error)}');
         ToastUtil.showCenter(_errorText(error));
@@ -356,7 +355,7 @@ class _OnlinePageState extends State<OnlinePage> {
 
   /// 请求一页远端数据，并根据 hasMore 更新下一页的起始位置。
   Future<void> _loadPage({required int start, required bool replace}) async {
-    print('[Online][list] start=$start replace=$replace');
+    AppLog.info('[Online][list] start=$start replace=$replace');
     if (mounted) {
       setState(() {
         if (replace) _resetRows();
@@ -370,10 +369,6 @@ class _OnlinePageState extends State<OnlinePage> {
       if (!result.success) {
         throw DeviceApiException(result.errorMessage ?? '加载列表失败');
       }
-      print(
-        '[Online][list] response start=${result.start} limit=${result.limit} '
-        'rows=${result.rows.length} total=${result.total} hasMore=${result.hasMore}',
-      );
       if (mounted) {
         setState(() {
           if (replace) _rows.clear();
@@ -387,11 +382,11 @@ class _OnlinePageState extends State<OnlinePage> {
         });
       }
     } catch (error) {
-      print('[Online][list][error] $error');
+      AppLog.error('[Online][list][error] $error');
       if (mounted) setState(() => _error = _errorText(error));
       rethrow;
     } finally {
-      print('[Online][list] finished');
+      AppLog.info('[Online][list] finished');
       if (mounted) {
         setState(() {
           _loading = false;
@@ -460,14 +455,14 @@ class _OnlinePageState extends State<OnlinePage> {
 
   /// 提交新增或修改后以接口返回的行数据更新当前列表，不触发重新加载。
   Future<XlsTable> _saveRemoteRow(int? rowIndex, List<String> row) async {
-    print('[Online][save] rowIndex=$rowIndex row=$row');
+    AppLog.info('[Online][save] rowIndex=$rowIndex row=$row');
     final data = _rowToData(row);
     final deviceNo = rowIndex == null ? null : _deviceNo(row);
     final result = rowIndex == null
         ? await _addApi(data)
         : await _modifyApi(deviceNo!, data);
     if (!result.success) {
-      print('[Online][save][error] result=${result.raw}');
+      AppLog.error('[Online][save][error] result=${result.raw}');
       throw DeviceApiException(result.errorMessage ?? '保存失败');
     }
     final updatedData = <String, dynamic>{
@@ -480,23 +475,19 @@ class _OnlinePageState extends State<OnlinePage> {
     } else if (rowIndex < _rows.length) {
       _rows[rowIndex] = <String, dynamic>{..._rows[rowIndex], ...updatedData};
     }
-    print('[Online][save] completed result=${result.raw}');
     return _applyLocalRows();
   }
 
   /// 删除远程行后从当前列表移除该行，不触发重新加载。
   Future<XlsTable> _deleteRemoteRow(int rowIndex, List<String> row) async {
     final deviceNo = _deviceNo(row);
-    print('[Online][delete] rowIndex=$rowIndex deviceNo=$deviceNo');
     final result = await _deleteApi(deviceNo);
     if (!result.success) {
-      print('[Online][delete][error] result=${result.raw}');
       throw DeviceApiException(result.errorMessage ?? '删除失败');
     }
     _rows.removeAt(rowIndex);
     if (_nextStart > 0) _nextStart--;
     if (_total != null && _total! > 0) _total = _total! - 1;
-    print('[Online][delete] completed result=${result.raw}');
     return _applyLocalRows();
   }
 
