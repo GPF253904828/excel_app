@@ -2,8 +2,8 @@ import 'dart:async';
 import 'dart:io';
 import 'dart:typed_data';
 
-import 'package:excel_app/qr_code_service.dart';
-import 'package:excel_app/qr_create_page.dart';
+import 'package:excel_app/qr/qr_code_service.dart';
+import 'package:excel_app/qr/qr_create_page.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 

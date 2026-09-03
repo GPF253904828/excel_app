@@ -1,6 +1,6 @@
 import 'dart:io';
 
-import 'package:excel_app/utils/app_log.dart';
+import 'package:excel_app/log/app_log.dart';
 import 'package:excel_app/utils/net_util.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:logger/logger.dart';

@@ -2,7 +2,7 @@ import 'dart:io';
 import 'dart:ui' as ui;
 
 import 'package:archive/archive.dart';
-import 'package:excel_app/qr_code_service.dart';
+import 'package:excel_app/qr/qr_code_service.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 /// 判断二维码 PNG 是否包含官方标识的紫色色素。

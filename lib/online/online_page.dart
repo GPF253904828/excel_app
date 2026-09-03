@@ -7,7 +7,7 @@ import 'package:excel_app/device_detail_page.dart';
 import 'package:excel_app/network_tools/xls_reader.dart';
 import 'package:excel_app/online/online_config_page.dart';
 import 'package:excel_app/online/online_config_store.dart';
-import 'package:excel_app/qr_create_page.dart';
+import 'package:excel_app/qr/qr_create_page.dart';
 import 'package:excel_app/spreadsheet_page.dart';
 import 'package:excel_app/utils/net_util.dart';
 import 'package:excel_app/utils/toast_util.dart';

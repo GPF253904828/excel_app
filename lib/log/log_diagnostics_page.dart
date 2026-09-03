@@ -1,6 +1,6 @@
 import 'dart:io';
 
-import 'package:excel_app/utils/app_log.dart';
+import 'package:excel_app/log/app_log.dart';
 import 'package:flutter/material.dart';
 
 /// 定义诊断日志上传回调，具体上传地址由业务层注入。
@@ -76,14 +76,6 @@ class _LogDiagnosticsPageState extends State<LogDiagnosticsPage> {
     } finally {
       if (mounted) setState(() => _uploading = false);
     }
-  }
-
-  /// 预留邮件发送回调，未配置时保持按钮可见但不可用。
-  Future<void> _email() async {
-    final callback = widget.onEmail;
-    final path = _path;
-    if (callback == null || path == null) return;
-    await callback(File(path));
   }
 
   void _showMessage(String message) {

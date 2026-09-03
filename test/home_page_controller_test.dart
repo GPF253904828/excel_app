@@ -1,14 +1,15 @@
 import 'dart:io';
 
 import 'package:excel_app/home_page_controller.dart';
-import 'package:excel_app/utils/app_log.dart';
+import 'package:excel_app/log/app_log.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter/services.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
-  test('does not report running when the service cannot bind its port', () async {
+  test('does not report running when the service cannot bind its port',
+      () async {
     final logDirectory =
         await Directory.systemTemp.createTemp('excel-app-controller-log-');
     addTearDown(() => logDirectory.delete(recursive: true));

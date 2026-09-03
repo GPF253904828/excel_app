@@ -2,7 +2,7 @@
 
 import 'dart:convert';
 import 'package:http/http.dart' as http;
-import 'package:excel_app/utils/app_log.dart';
+import 'package:excel_app/log/app_log.dart';
 
 /// 设备表脚本接口封装（对应 WPS 端 JS 脚本的 query/modify/add/delete 四类操作）
 class DeviceApi {

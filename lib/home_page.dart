@@ -2,13 +2,13 @@ import 'package:excel_app/export_page.dart';
 import 'package:excel_app/device_detail_page.dart';
 import 'package:excel_app/home_page_controller.dart';
 import 'package:excel_app/home_page_view.dart';
-import 'package:excel_app/log_diagnostics_page.dart';
+import 'package:excel_app/log/log_diagnostics_page.dart';
 import 'package:excel_app/local_page.dart';
 import 'package:excel_app/online/online_config_store.dart';
 import 'package:excel_app/online/online_page.dart';
-import 'package:excel_app/scanner_page.dart';
+import 'package:excel_app/qr/scanner_page.dart';
 import 'package:excel_app/utils/net_util.dart';
-import 'package:excel_app/utils/diagnostics_service.dart';
+import 'package:excel_app/log/diagnostics_service.dart';
 import 'package:excel_app/utils/toast_util.dart';
 import 'package:flutter/material.dart';
 

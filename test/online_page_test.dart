@@ -5,7 +5,7 @@ import 'package:excel_app/device_edit_page.dart';
 import 'package:excel_app/online/online_config_page.dart';
 import 'package:excel_app/online/online_config_store.dart';
 import 'package:excel_app/online/online_page.dart';
-import 'package:excel_app/qr_create_page.dart';
+import 'package:excel_app/qr/qr_create_page.dart';
 import 'package:excel_app/utils/net_util.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';

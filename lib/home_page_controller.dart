@@ -2,8 +2,8 @@ import 'dart:io';
 import 'package:excel_app/network_tools/csv_exporter.dart';
 import 'package:excel_app/network_tools/file_service.dart';
 import 'package:excel_app/network_tools/xls_reader.dart';
-import 'package:excel_app/utils/app_log.dart';
-import 'package:excel_app/utils/diagnostics_service.dart';
+import 'package:excel_app/log/app_log.dart';
+import 'package:excel_app/log/diagnostics_service.dart';
 import 'package:flutter/foundation.dart';
 import 'package:path_provider/path_provider.dart';
 

@@ -2,8 +2,8 @@ import 'dart:io';
 
 import 'package:excel_app/device_edit_page.dart';
 import 'package:excel_app/network_tools/xls_reader.dart';
-import 'package:excel_app/qr_create_page.dart';
-import 'package:excel_app/scanner_page.dart';
+import 'package:excel_app/qr/qr_create_page.dart';
+import 'package:excel_app/qr/scanner_page.dart';
 import 'package:excel_app/spreadsheet_page.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';

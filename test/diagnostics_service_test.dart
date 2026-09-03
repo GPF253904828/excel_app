@@ -1,6 +1,6 @@
 import 'dart:io';
 
-import 'package:excel_app/utils/diagnostics_service.dart';
+import 'package:excel_app/log/diagnostics_service.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {

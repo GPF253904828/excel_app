@@ -1,7 +1,7 @@
 import 'dart:io';
 import 'dart:typed_data';
 
-import 'package:excel_app/qr_code_service.dart';
+import 'package:excel_app/qr/qr_code_service.dart';
 import 'package:flutter/material.dart';
 import 'package:path_provider/path_provider.dart';
 

@@ -1,6 +1,6 @@
 import 'dart:async';
 
-import 'package:excel_app/scanner_page.dart';
+import 'package:excel_app/qr/scanner_page.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
