@@ -5,6 +5,7 @@ class LocalPageView extends StatelessWidget {
   final String title;
   final String status;
   final String? localIp;
+  final String? networkInfo;
   final int port;
   final bool isRunning;
   final bool hasFiles;
@@ -23,6 +24,7 @@ class LocalPageView extends StatelessWidget {
     this.title = '本地配置',
     required this.status,
     required this.localIp,
+    this.networkInfo,
     required this.port,
     required this.isRunning,
     required this.hasFiles,
@@ -161,6 +163,24 @@ class LocalPageView extends StatelessWidget {
           if (extraAction != null) ...[
             const SizedBox(height: 16),
             extraAction!,
+          ],
+          if (networkInfo != null) ...[
+            const SizedBox(height: 28),
+            Text(
+              '当前网络（辅助信息）',
+              style: textTheme.bodySmall?.copyWith(
+                color: colors.onSurfaceVariant,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            const SizedBox(height: 6),
+            SelectableText(
+              networkInfo!,
+              style: textTheme.bodySmall?.copyWith(
+                color: colors.onSurfaceVariant,
+                height: 1.5,
+              ),
+            ),
           ],
           const SizedBox(height: 24),
         ],

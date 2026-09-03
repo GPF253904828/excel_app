@@ -1,0 +1,1834 @@
+Network Diagnostic Report 
+Generated at: ?? 2026/09/03 17:12:53.14 
+Computer name: LAPTOP-RCOQBOAM 
+User: Kelly 
+=================================================== 
+[1/10] ipconfig /all 
+--- [1] FULL IP CONFIGURATION --- 
+
+Windows IP Configuration
+
+   Host Name . . . . . . . . . . . . : LAPTOP-RCOQBOAM
+   Primary Dns Suffix  . . . . . . . : 
+   Node Type . . . . . . . . . . . . : Hybrid
+   IP Routing Enabled. . . . . . . . : No
+   WINS Proxy Enabled. . . . . . . . : No
+
+Wireless LAN adapter ��������* 1:
+
+   Media State . . . . . . . . . . . : Media disconnected
+   Connection-specific DNS Suffix  . : 
+   Description . . . . . . . . . . . : Microsoft Wi-Fi Direct Virtual Adapter
+   Physical Address. . . . . . . . . : 38-68-93-80-2B-FA
+   DHCP Enabled. . . . . . . . . . . : Yes
+   Autoconfiguration Enabled . . . . : Yes
+
+Wireless LAN adapter ��������* 2:
+
+   Media State . . . . . . . . . . . : Media disconnected
+   Connection-specific DNS Suffix  . : 
+   Description . . . . . . . . . . . : Microsoft Wi-Fi Direct Virtual Adapter #2
+   Physical Address. . . . . . . . . : 3A-68-93-80-2B-F9
+   DHCP Enabled. . . . . . . . . . . : No
+   Autoconfiguration Enabled . . . . : Yes
+
+Ethernet adapter ��̫�� 2:
+
+   Connection-specific DNS Suffix  . : 
+   Description . . . . . . . . . . . : ASIX USB to Gigabit Ethernet Family Adapter
+   Physical Address. . . . . . . . . : 68-DA-73-AB-2F-1D
+   DHCP Enabled. . . . . . . . . . . : Yes
+   Autoconfiguration Enabled . . . . : Yes
+   Link-local IPv6 Address . . . . . : fe80::da28:4424:7c05:a687%15(Preferred) 
+   IPv4 Address. . . . . . . . . . . : 10.200.16.100(Preferred) 
+   Subnet Mask . . . . . . . . . . . : 255.255.254.0
+   Lease Obtained. . . . . . . . . . : 2026��9��3�� 15:11:26
+   Lease Expires . . . . . . . . . . : 2026��9��11�� 15:11:25
+   Default Gateway . . . . . . . . . : 10.200.17.254
+   DHCP Server . . . . . . . . . . . : 10.200.20.11
+   DHCPv6 IAID . . . . . . . . . . . : 191421043
+   DHCPv6 Client DUID. . . . . . . . : 00-01-00-01-2E-A3-86-45-68-DA-73-AB-2F-1D
+   DNS Servers . . . . . . . . . . . : 10.200.20.3
+                                       114.114.114.114
+   NetBIOS over Tcpip. . . . . . . . : Enabled
+
+Wireless LAN adapter WLAN:
+
+   Media State . . . . . . . . . . . : Media disconnected
+   Connection-specific DNS Suffix  . : 
+   Description . . . . . . . . . . . : Intel(R) Wi-Fi 6 AX201 160MHz
+   Physical Address. . . . . . . . . : 38-68-93-80-2B-F9
+   DHCP Enabled. . . . . . . . . . . : Yes
+   Autoconfiguration Enabled . . . . : Yes
+[2/10] route print 
+--- [2] ROUTING TABLE --- 
+===========================================================================
+Interface List
+ 16...38 68 93 80 2b fa ......Microsoft Wi-Fi Direct Virtual Adapter
+ 18...3a 68 93 80 2b f9 ......Microsoft Wi-Fi Direct Virtual Adapter #2
+ 15...68 da 73 ab 2f 1d ......ASIX USB to Gigabit Ethernet Family Adapter
+  9...38 68 93 80 2b f9 ......Intel(R) Wi-Fi 6 AX201 160MHz
+  1...........................Software Loopback Interface 1
+===========================================================================
+
+IPv4 Route Table
+===========================================================================
+Active Routes:
+Network Destination        Netmask          Gateway       Interface  Metric
+          0.0.0.0          0.0.0.0    10.200.17.254    10.200.16.100     35
+      10.200.16.0    255.255.254.0         On-link     10.200.16.100    291
+    10.200.16.100  255.255.255.255         On-link     10.200.16.100    291
+    10.200.17.255  255.255.255.255         On-link     10.200.16.100    291
+        127.0.0.0        255.0.0.0         On-link         127.0.0.1    331
+        127.0.0.1  255.255.255.255         On-link         127.0.0.1    331
+  127.255.255.255  255.255.255.255         On-link         127.0.0.1    331
+        224.0.0.0        240.0.0.0         On-link         127.0.0.1    331
+        224.0.0.0        240.0.0.0         On-link     10.200.16.100    291
+  255.255.255.255  255.255.255.255         On-link         127.0.0.1    331
+  255.255.255.255  255.255.255.255         On-link     10.200.16.100    291
+===========================================================================
+Persistent Routes:
+  None
+
+IPv6 Route Table
+===========================================================================
+Active Routes:
+ If Metric Network Destination      Gateway
+  1    331 ::1/128                  On-link
+ 15    291 fe80::/64                On-link
+ 15    291 fe80::da28:4424:7c05:a687/128
+                                    On-link
+  1    331 ff00::/8                 On-link
+ 15    291 ff00::/8                 On-link
+===========================================================================
+Persistent Routes:
+  None
+[3/10] netstat -ano 
+--- [3] ALL ACTIVE CONNECTIONS AND PORTS --- 
+
+Active Connections
+
+  Proto  Local Address          Foreign Address        State           PID
+  TCP    0.0.0.0:135            0.0.0.0:0              LISTENING       1468
+  TCP    0.0.0.0:445            0.0.0.0:0              LISTENING       4
+  TCP    0.0.0.0:808            0.0.0.0:0              LISTENING       5640
+  TCP    0.0.0.0:2222           0.0.0.0:0              LISTENING       10368
+  TCP    0.0.0.0:5040           0.0.0.0:0              LISTENING       7556
+  TCP    0.0.0.0:5555           0.0.0.0:0              LISTENING       10368
+  TCP    0.0.0.0:6088           0.0.0.0:0              LISTENING       8152
+  TCP    0.0.0.0:6646           0.0.0.0:0              LISTENING       8000
+  TCP    0.0.0.0:21051          0.0.0.0:0              LISTENING       6388
+  TCP    0.0.0.0:21061          0.0.0.0:0              LISTENING       6388
+  TCP    0.0.0.0:31227          0.0.0.0:0              LISTENING       1476
+  TCP    0.0.0.0:31228          0.0.0.0:0              LISTENING       1476
+  TCP    0.0.0.0:31443          0.0.0.0:0              LISTENING       1476
+  TCP    0.0.0.0:49664          0.0.0.0:0              LISTENING       1088
+  TCP    0.0.0.0:49665          0.0.0.0:0              LISTENING       408
+  TCP    0.0.0.0:49666          0.0.0.0:0              LISTENING       2704
+  TCP    0.0.0.0:49668          0.0.0.0:0              LISTENING       3860
+  TCP    0.0.0.0:49676          0.0.0.0:0              LISTENING       4772
+  TCP    0.0.0.0:49689          0.0.0.0:0              LISTENING       1064
+  TCP    0.0.0.0:57323          0.0.0.0:0              LISTENING       5744
+  TCP    10.200.16.100:139      0.0.0.0:0              LISTENING       4
+  TCP    10.200.16.100:5807     0.0.0.0:0              LISTENING       4560
+  TCP    10.200.16.100:49412    4.145.79.82:443        ESTABLISHED     6296
+  TCP    10.200.16.100:49783    157.148.41.190:443     ESTABLISHED     9684
+  TCP    10.200.16.100:49935    211.154.235.38:443     CLOSE_WAIT      952
+  TCP    10.200.16.100:50953    223.167.82.188:443     ESTABLISHED     9684
+  TCP    10.200.16.100:51842    112.53.42.218:443      ESTABLISHED     6504
+  TCP    10.200.16.100:51913    122.96.96.211:443      ESTABLISHED     10368
+  TCP    10.200.16.100:53203    101.126.77.65:443      CLOSE_WAIT      29396
+  TCP    10.200.16.100:54505    202.89.233.100:443     ESTABLISHED     20820
+  TCP    10.200.16.100:54506    157.148.54.114:443     TIME_WAIT       0
+  TCP    10.200.16.100:54507    223.167.82.248:443     ESTABLISHED     18724
+  TCP    10.200.16.100:54941    120.131.12.37:443      CLOSE_WAIT      5744
+  TCP    10.200.16.100:54945    157.148.41.188:36688   TIME_WAIT       0
+  TCP    10.200.16.100:54946    157.148.41.188:36688   TIME_WAIT       0
+  TCP    10.200.16.100:54947    157.148.41.188:36688   TIME_WAIT       0
+  TCP    10.200.16.100:54948    157.148.41.188:36688   TIME_WAIT       0
+  TCP    10.200.16.100:54952    111.206.148.116:443    TIME_WAIT       0
+  TCP    10.200.16.100:54953    157.148.41.188:36688   TIME_WAIT       0
+  TCP    10.200.16.100:54954    157.148.41.188:36688   TIME_WAIT       0
+  TCP    10.200.16.100:54961    111.206.148.116:8081   TIME_WAIT       0
+  TCP    10.200.16.100:54984    157.255.202.42:443     TIME_WAIT       0
+  TCP    10.200.16.100:54985    157.148.54.114:443     TIME_WAIT       0
+  TCP    10.200.16.100:55208    140.207.191.167:443    ESTABLISHED     9684
+  TCP    10.200.16.100:55222    157.148.41.188:36688   TIME_WAIT       0
+  TCP    10.200.16.100:55223    157.148.41.188:36688   TIME_WAIT       0
+  TCP    10.200.16.100:55230    111.206.148.116:8081   TIME_WAIT       0
+  TCP    10.200.16.100:55231    111.206.148.116:8081   TIME_WAIT       0
+  TCP    10.200.16.100:55232    111.206.148.116:8081   TIME_WAIT       0
+  TCP    10.200.16.100:55233    111.206.148.116:8081   TIME_WAIT       0
+  TCP    10.200.16.100:55234    116.196.148.122:443    ESTABLISHED     18724
+  TCP    10.200.16.100:55238    111.206.148.116:443    TIME_WAIT       0
+  TCP    10.200.16.100:55239    111.206.148.116:443    TIME_WAIT       0
+  TCP    10.200.16.100:55240    111.206.148.116:443    TIME_WAIT       0
+  TCP    10.200.16.100:55241    111.206.148.116:443    TIME_WAIT       0
+  TCP    10.200.16.100:55242    157.148.41.188:36688   ESTABLISHED     6504
+  TCP    10.200.16.100:55243    140.207.122.204:80     ESTABLISHED     19940
+  TCP    10.200.16.100:55244    111.206.148.116:443    TIME_WAIT       0
+  TCP    10.200.16.100:55480    101.126.24.53:443      CLOSE_WAIT      18344
+  TCP    10.200.16.100:56423    101.126.88.254:443     CLOSE_WAIT      5744
+  TCP    10.200.16.100:57164    157.255.202.42:443     CLOSE_WAIT      4560
+  TCP    10.200.16.100:57165    157.148.54.114:443     CLOSE_WAIT      4560
+  TCP    10.200.16.100:57172    61.241.57.52:443       CLOSE_WAIT      4560
+  TCP    10.200.16.100:57406    157.255.5.55:443       ESTABLISHED     19284
+  TCP    10.200.16.100:58709    115.190.45.115:443     CLOSE_WAIT      18344
+  TCP    10.200.16.100:59077    101.126.88.254:443     CLOSE_WAIT      29396
+  TCP    10.200.16.100:59548    10.200.17.210:445      ESTABLISHED     4
+  TCP    10.200.16.100:59553    182.50.10.219:443      ESTABLISHED     19940
+  TCP    10.200.16.100:59758    211.154.236.130:443    CLOSE_WAIT      4524
+  TCP    10.200.16.100:60548    123.249.42.199:11111   ESTABLISHED     5744
+  TCP    10.200.16.100:60559    157.148.57.44:8080     ESTABLISHED     4560
+  TCP    10.200.16.100:61427    1.92.83.204:443        CLOSE_WAIT      18344
+  TCP    10.200.16.100:62045    123.6.33.57:443        ESTABLISHED     9684
+  TCP    10.200.16.100:62495    101.126.24.53:443      CLOSE_WAIT      5744
+  TCP    10.200.16.100:62504    180.184.93.15:443      CLOSE_WAIT      4524
+  TCP    10.200.16.100:62590    157.255.202.42:443     CLOSE_WAIT      4560
+  TCP    10.200.16.100:62592    157.148.54.114:443     CLOSE_WAIT      4560
+  TCP    10.200.16.100:63205    140.206.162.151:443    CLOSE_WAIT      9684
+  TCP    10.200.16.100:63482    114.250.65.33:443      CLOSE_WAIT      10368
+  TCP    10.200.16.100:63537    58.246.163.126:15747   ESTABLISHED     10368
+  TCP    10.200.16.100:63551    140.207.121.72:5692    ESTABLISHED     10368
+  TCP    10.200.16.100:63552    116.128.171.62:5692    ESTABLISHED     10368
+  TCP    10.200.16.100:64288    211.150.64.54:443      ESTABLISHED     20820
+  TCP    10.200.16.100:64536    115.190.63.128:443     CLOSE_WAIT      5744
+  TCP    10.200.16.100:64537    115.190.63.128:443     CLOSE_WAIT      5744
+  TCP    10.200.16.100:64574    211.154.236.64:443     CLOSE_WAIT      29396
+  TCP    10.200.16.100:64577    211.154.236.64:443     CLOSE_WAIT      18344
+  TCP    10.200.16.100:65252    61.241.57.52:443       ESTABLISHED     9684
+  TCP    10.200.16.100:65254    157.148.41.188:36688   TIME_WAIT       0
+  TCP    10.200.16.100:65525    114.117.119.114:443    ESTABLISHED     9684
+  TCP    127.0.0.1:4709         0.0.0.0:0              LISTENING       5744
+  TCP    127.0.0.1:5037         0.0.0.0:0              LISTENING       28684
+  TCP    127.0.0.1:5037         127.0.0.1:50958        TIME_WAIT       0
+  TCP    127.0.0.1:5037         127.0.0.1:50959        TIME_WAIT       0
+  TCP    127.0.0.1:5037         127.0.0.1:50962        TIME_WAIT       0
+  TCP    127.0.0.1:5037         127.0.0.1:50963        TIME_WAIT       0
+  TCP    127.0.0.1:5037         127.0.0.1:54509        TIME_WAIT       0
+  TCP    127.0.0.1:5037         127.0.0.1:54510        TIME_WAIT       0
+  TCP    127.0.0.1:5037         127.0.0.1:54943        TIME_WAIT       0
+  TCP    127.0.0.1:5037         127.0.0.1:54944        TIME_WAIT       0
+  TCP    127.0.0.1:5037         127.0.0.1:54950        TIME_WAIT       0
+  TCP    127.0.0.1:5037         127.0.0.1:54951        TIME_WAIT       0
+  TCP    127.0.0.1:5037         127.0.0.1:54956        TIME_WAIT       0
+  TCP    127.0.0.1:5037         127.0.0.1:54957        TIME_WAIT       0
+  TCP    127.0.0.1:5037         127.0.0.1:54959        TIME_WAIT       0
+  TCP    127.0.0.1:5037         127.0.0.1:54960        TIME_WAIT       0
+  TCP    127.0.0.1:5037         127.0.0.1:54963        TIME_WAIT       0
+  TCP    127.0.0.1:5037         127.0.0.1:54964        TIME_WAIT       0
+  TCP    127.0.0.1:5037         127.0.0.1:54966        TIME_WAIT       0
+  TCP    127.0.0.1:5037         127.0.0.1:54967        TIME_WAIT       0
+  TCP    127.0.0.1:5037         127.0.0.1:54969        TIME_WAIT       0
+  TCP    127.0.0.1:5037         127.0.0.1:54970        TIME_WAIT       0
+  TCP    127.0.0.1:5037         127.0.0.1:54972        TIME_WAIT       0
+  TCP    127.0.0.1:5037         127.0.0.1:54973        TIME_WAIT       0
+  TCP    127.0.0.1:5037         127.0.0.1:54977        TIME_WAIT       0
+  TCP    127.0.0.1:5037         127.0.0.1:54978        TIME_WAIT       0
+  TCP    127.0.0.1:5037         127.0.0.1:54980        TIME_WAIT       0
+  TCP    127.0.0.1:5037         127.0.0.1:54981        TIME_WAIT       0
+  TCP    127.0.0.1:5037         127.0.0.1:55210        TIME_WAIT       0
+  TCP    127.0.0.1:5037         127.0.0.1:55211        TIME_WAIT       0
+  TCP    127.0.0.1:5037         127.0.0.1:55214        TIME_WAIT       0
+  TCP    127.0.0.1:5037         127.0.0.1:55215        TIME_WAIT       0
+  TCP    127.0.0.1:5037         127.0.0.1:55220        TIME_WAIT       0
+  TCP    127.0.0.1:5037         127.0.0.1:55221        TIME_WAIT       0
+  TCP    127.0.0.1:5037         127.0.0.1:55225        TIME_WAIT       0
+  TCP    127.0.0.1:5037         127.0.0.1:55226        TIME_WAIT       0
+  TCP    127.0.0.1:5037         127.0.0.1:55228        TIME_WAIT       0
+  TCP    127.0.0.1:5037         127.0.0.1:55229        TIME_WAIT       0
+  TCP    127.0.0.1:5037         127.0.0.1:55236        TIME_WAIT       0
+  TCP    127.0.0.1:5037         127.0.0.1:55237        TIME_WAIT       0
+  TCP    127.0.0.1:5037         127.0.0.1:62048        TIME_WAIT       0
+  TCP    127.0.0.1:5037         127.0.0.1:62049        TIME_WAIT       0
+  TCP    127.0.0.1:5037         127.0.0.1:62052        TIME_WAIT       0
+  TCP    127.0.0.1:5037         127.0.0.1:62053        TIME_WAIT       0
+  TCP    127.0.0.1:5037         127.0.0.1:64290        TIME_WAIT       0
+  TCP    127.0.0.1:5037         127.0.0.1:64291        TIME_WAIT       0
+  TCP    127.0.0.1:5037         127.0.0.1:64293        TIME_WAIT       0
+  TCP    127.0.0.1:5037         127.0.0.1:64294        TIME_WAIT       0
+  TCP    127.0.0.1:5285         0.0.0.0:0              LISTENING       20992
+  TCP    127.0.0.1:5555         127.0.0.1:52707        ESTABLISHED     10368
+  TCP    127.0.0.1:9882         0.0.0.0:0              LISTENING       4560
+  TCP    127.0.0.1:9883         0.0.0.0:0              LISTENING       4560
+  TCP    127.0.0.1:10000        0.0.0.0:0              LISTENING       19176
+  TCP    127.0.0.1:14013        0.0.0.0:0              LISTENING       19940
+  TCP    127.0.0.1:14016        0.0.0.0:0              LISTENING       19940
+  TCP    127.0.0.1:14019        0.0.0.0:0              LISTENING       19940
+  TCP    127.0.0.1:14022        0.0.0.0:0              LISTENING       19940
+  TCP    127.0.0.1:14023        0.0.0.0:0              LISTENING       19940
+  TCP    127.0.0.1:19434        0.0.0.0:0              LISTENING       3276
+  TCP    127.0.0.1:31228        127.0.0.1:50182        ESTABLISHED     1476
+  TCP    127.0.0.1:31228        127.0.0.1:50183        ESTABLISHED     1476
+  TCP    127.0.0.1:31228        127.0.0.1:50184        ESTABLISHED     1476
+  TCP    127.0.0.1:49683        0.0.0.0:0              LISTENING       6504
+  TCP    127.0.0.1:49699        0.0.0.0:0              LISTENING       8376
+  TCP    127.0.0.1:50010        0.0.0.0:0              LISTENING       4560
+  TCP    127.0.0.1:50014        127.0.0.1:50017        ESTABLISHED     4560
+  TCP    127.0.0.1:50015        127.0.0.1:50016        ESTABLISHED     4560
+  TCP    127.0.0.1:50016        127.0.0.1:50015        ESTABLISHED     4560
+  TCP    127.0.0.1:50017        127.0.0.1:50014        ESTABLISHED     4560
+  TCP    127.0.0.1:50018        0.0.0.0:0              LISTENING       4560
+  TCP    127.0.0.1:50018        127.0.0.1:50020        ESTABLISHED     4560
+  TCP    127.0.0.1:50019        127.0.0.1:50021        ESTABLISHED     4560
+  TCP    127.0.0.1:50020        127.0.0.1:50018        ESTABLISHED     4560
+  TCP    127.0.0.1:50021        127.0.0.1:50019        ESTABLISHED     4560
+  TCP    127.0.0.1:50027        127.0.0.1:50028        ESTABLISHED     4560
+  TCP    127.0.0.1:50028        127.0.0.1:50027        ESTABLISHED     4560
+  TCP    127.0.0.1:50031        127.0.0.1:50032        ESTABLISHED     4560
+  TCP    127.0.0.1:50032        127.0.0.1:50031        ESTABLISHED     4560
+  TCP    127.0.0.1:50118        127.0.0.1:50119        ESTABLISHED     4560
+  TCP    127.0.0.1:50119        127.0.0.1:50118        ESTABLISHED     4560
+  TCP    127.0.0.1:50122        127.0.0.1:50123        ESTABLISHED     4560
+  TCP    127.0.0.1:50123        127.0.0.1:50122        ESTABLISHED     4560
+  TCP    127.0.0.1:50182        127.0.0.1:31228        ESTABLISHED     18804
+  TCP    127.0.0.1:50183        127.0.0.1:31228        ESTABLISHED     14172
+  TCP    127.0.0.1:50184        127.0.0.1:31228        ESTABLISHED     2432
+  TCP    127.0.0.1:50195        127.0.0.1:50196        ESTABLISHED     4560
+  TCP    127.0.0.1:50196        127.0.0.1:50195        ESTABLISHED     4560
+  TCP    127.0.0.1:50956        127.0.0.1:5037         TIME_WAIT       0
+  TCP    127.0.0.1:50961        127.0.0.1:5037         TIME_WAIT       0
+  TCP    127.0.0.1:52159        127.0.0.1:52160        ESTABLISHED     4560
+  TCP    127.0.0.1:52160        127.0.0.1:52159        ESTABLISHED     4560
+  TCP    127.0.0.1:52348        127.0.0.1:52349        ESTABLISHED     4560
+  TCP    127.0.0.1:52349        127.0.0.1:52348        ESTABLISHED     4560
+  TCP    127.0.0.1:52703        127.0.0.1:52704        ESTABLISHED     28684
+  TCP    127.0.0.1:52704        127.0.0.1:52703        ESTABLISHED     28684
+  TCP    127.0.0.1:52705        127.0.0.1:52706        ESTABLISHED     28684
+  TCP    127.0.0.1:52706        127.0.0.1:52705        ESTABLISHED     28684
+  TCP    127.0.0.1:52707        127.0.0.1:5555         ESTABLISHED     28684
+  TCP    127.0.0.1:54508        127.0.0.1:5037         TIME_WAIT       0
+  TCP    127.0.0.1:54942        127.0.0.1:5037         TIME_WAIT       0
+  TCP    127.0.0.1:54949        127.0.0.1:5037         TIME_WAIT       0
+  TCP    127.0.0.1:54955        127.0.0.1:5037         TIME_WAIT       0
+  TCP    127.0.0.1:54958        127.0.0.1:5037         TIME_WAIT       0
+  TCP    127.0.0.1:54962        127.0.0.1:5037         TIME_WAIT       0
+  TCP    127.0.0.1:54965        127.0.0.1:5037         TIME_WAIT       0
+  TCP    127.0.0.1:54968        127.0.0.1:5037         TIME_WAIT       0
+  TCP    127.0.0.1:54971        127.0.0.1:5037         TIME_WAIT       0
+  TCP    127.0.0.1:54976        127.0.0.1:5037         TIME_WAIT       0
+  TCP    127.0.0.1:54979        127.0.0.1:5037         TIME_WAIT       0
+  TCP    127.0.0.1:55209        127.0.0.1:5037         TIME_WAIT       0
+  TCP    127.0.0.1:55213        127.0.0.1:5037         TIME_WAIT       0
+  TCP    127.0.0.1:55219        127.0.0.1:5037         TIME_WAIT       0
+  TCP    127.0.0.1:55224        127.0.0.1:5037         TIME_WAIT       0
+  TCP    127.0.0.1:55227        127.0.0.1:5037         TIME_WAIT       0
+  TCP    127.0.0.1:55235        127.0.0.1:5037         TIME_WAIT       0
+  TCP    127.0.0.1:57149        127.0.0.1:57150        ESTABLISHED     4560
+  TCP    127.0.0.1:57150        127.0.0.1:57149        ESTABLISHED     4560
+  TCP    127.0.0.1:57153        127.0.0.1:57154        ESTABLISHED     4560
+  TCP    127.0.0.1:57154        127.0.0.1:57153        ESTABLISHED     4560
+  TCP    127.0.0.1:57170        127.0.0.1:57171        ESTABLISHED     4560
+  TCP    127.0.0.1:57171        127.0.0.1:57170        ESTABLISHED     4560
+  TCP    127.0.0.1:59522        127.0.0.1:59523        ESTABLISHED     4560
+  TCP    127.0.0.1:59523        127.0.0.1:59522        ESTABLISHED     4560
+  TCP    127.0.0.1:59528        127.0.0.1:59529        ESTABLISHED     4560
+  TCP    127.0.0.1:59529        127.0.0.1:59528        ESTABLISHED     4560
+  TCP    127.0.0.1:62047        127.0.0.1:5037         TIME_WAIT       0
+  TCP    127.0.0.1:62051        127.0.0.1:5037         TIME_WAIT       0
+  TCP    127.0.0.1:64063        127.0.0.1:64064        ESTABLISHED     4560
+  TCP    127.0.0.1:64064        127.0.0.1:64063        ESTABLISHED     4560
+  TCP    127.0.0.1:64066        127.0.0.1:64067        ESTABLISHED     4560
+  TCP    127.0.0.1:64067        127.0.0.1:64066        ESTABLISHED     4560
+  TCP    127.0.0.1:64289        127.0.0.1:5037         TIME_WAIT       0
+  TCP    127.0.0.1:64292        127.0.0.1:5037         TIME_WAIT       0
+  TCP    127.0.0.1:64311        127.0.0.1:64312        ESTABLISHED     4560
+  TCP    127.0.0.1:64312        127.0.0.1:64311        ESTABLISHED     4560
+  TCP    [::]:135               [::]:0                 LISTENING       1468
+  TCP    [::]:445               [::]:0                 LISTENING       4
+  TCP    [::]:808               [::]:0                 LISTENING       5640
+  TCP    [::]:6088              [::]:0                 LISTENING       8152
+  TCP    [::]:49664             [::]:0                 LISTENING       1088
+  TCP    [::]:49665             [::]:0                 LISTENING       408
+  TCP    [::]:49666             [::]:0                 LISTENING       2704
+  TCP    [::]:49668             [::]:0                 LISTENING       3860
+  TCP    [::]:49676             [::]:0                 LISTENING       4772
+  TCP    [::]:49689             [::]:0                 LISTENING       1064
+  TCP    [::]:57323             [::]:0                 LISTENING       5744
+  TCP    [::1]:49679            [::]:0                 LISTENING       5816
+  UDP    0.0.0.0:123            *:*                                    21196
+  UDP    0.0.0.0:5050           *:*                                    7556
+  UDP    0.0.0.0:5353           *:*                                    6088
+  UDP    0.0.0.0:5353           *:*                                    20820
+  UDP    0.0.0.0:5353           *:*                                    9684
+  UDP    0.0.0.0:5353           *:*                                    9684
+  UDP    0.0.0.0:5353           *:*                                    19848
+  UDP    0.0.0.0:5353           *:*                                    6088
+  UDP    0.0.0.0:5353           *:*                                    2532
+  UDP    0.0.0.0:5353           *:*                                    20820
+  UDP    0.0.0.0:5353           *:*                                    19848
+  UDP    0.0.0.0:5355           *:*                                    2532
+  UDP    0.0.0.0:6646           *:*                                    8000
+  UDP    0.0.0.0:31229          *:*                                    1476
+  UDP    0.0.0.0:52323          *:*                                    2532
+  UDP    0.0.0.0:57592          *:*                                    8376
+  UDP    0.0.0.0:58799          *:*                                    6504
+  UDP    0.0.0.0:58897          *:*                                    4772
+  UDP    0.0.0.0:58987          *:*                                    2532
+  UDP    0.0.0.0:59261          *:*                                    2532
+  UDP    0.0.0.0:59904          *:*                                    2532
+  UDP    0.0.0.0:62836          42.177.90.32:443                       19940
+  UDP    0.0.0.0:64080          *:*                                    3276
+  UDP    0.0.0.0:64922          *:*                                    2532
+  UDP    10.200.16.100:137      *:*                                    4
+  UDP    10.200.16.100:138      *:*                                    4
+  UDP    10.200.16.100:1900     *:*                                    13296
+  UDP    10.200.16.100:62902    *:*                                    13296
+  UDP    127.0.0.1:1900         *:*                                    13296
+  UDP    127.0.0.1:37200        *:*                                    24120
+  UDP    127.0.0.1:51200        *:*                                    24120
+  UDP    127.0.0.1:58798        127.0.0.1:58798                        5776
+  UDP    127.0.0.1:62903        *:*                                    13296
+  UDP    [::]:123               *:*                                    21196
+  UDP    [::]:5353              *:*                                    9684
+  UDP    [::]:5353              *:*                                    19848
+  UDP    [::]:5353              *:*                                    20820
+  UDP    [::]:5353              *:*                                    6088
+  UDP    [::]:5353              *:*                                    2532
+  UDP    [::]:5355              *:*                                    2532
+  UDP    [::]:52323             *:*                                    2532
+  UDP    [::]:58987             *:*                                    2532
+  UDP    [::]:59261             *:*                                    2532
+  UDP    [::]:59904             *:*                                    2532
+  UDP    [::]:64922             *:*                                    2532
+  UDP    [::1]:1900             *:*                                    13296
+  UDP    [::1]:62901            *:*                                    13296
+  UDP    [fe80::da28:4424:7c05:a687%15]:1900  *:*                                    13296
+  UDP    [fe80::da28:4424:7c05:a687%15]:62900  *:*                                    13296
+[4/10] netstat listening ports 
+--- [4] LISTENING PORTS ONLY --- 
+  TCP    0.0.0.0:135            0.0.0.0:0              LISTENING
+  TCP    0.0.0.0:445            0.0.0.0:0              LISTENING
+  TCP    0.0.0.0:808            0.0.0.0:0              LISTENING
+  TCP    0.0.0.0:2222           0.0.0.0:0              LISTENING
+  TCP    0.0.0.0:5040           0.0.0.0:0              LISTENING
+  TCP    0.0.0.0:5555           0.0.0.0:0              LISTENING
+  TCP    0.0.0.0:6088           0.0.0.0:0              LISTENING
+  TCP    0.0.0.0:6646           0.0.0.0:0              LISTENING
+  TCP    0.0.0.0:21051          0.0.0.0:0              LISTENING
+  TCP    0.0.0.0:21061          0.0.0.0:0              LISTENING
+  TCP    0.0.0.0:31227          0.0.0.0:0              LISTENING
+  TCP    0.0.0.0:31228          0.0.0.0:0              LISTENING
+  TCP    0.0.0.0:31443          0.0.0.0:0              LISTENING
+  TCP    0.0.0.0:49664          0.0.0.0:0              LISTENING
+  TCP    0.0.0.0:49665          0.0.0.0:0              LISTENING
+  TCP    0.0.0.0:49666          0.0.0.0:0              LISTENING
+  TCP    0.0.0.0:49668          0.0.0.0:0              LISTENING
+  TCP    0.0.0.0:49676          0.0.0.0:0              LISTENING
+  TCP    0.0.0.0:49689          0.0.0.0:0              LISTENING
+  TCP    0.0.0.0:57323          0.0.0.0:0              LISTENING
+  TCP    10.200.16.100:139      0.0.0.0:0              LISTENING
+  TCP    10.200.16.100:5807     0.0.0.0:0              LISTENING
+  TCP    127.0.0.1:4709         0.0.0.0:0              LISTENING
+  TCP    127.0.0.1:5037         0.0.0.0:0              LISTENING
+  TCP    127.0.0.1:5285         0.0.0.0:0              LISTENING
+  TCP    127.0.0.1:9882         0.0.0.0:0              LISTENING
+  TCP    127.0.0.1:9883         0.0.0.0:0              LISTENING
+  TCP    127.0.0.1:10000        0.0.0.0:0              LISTENING
+  TCP    127.0.0.1:14013        0.0.0.0:0              LISTENING
+  TCP    127.0.0.1:14016        0.0.0.0:0              LISTENING
+  TCP    127.0.0.1:14019        0.0.0.0:0              LISTENING
+  TCP    127.0.0.1:14022        0.0.0.0:0              LISTENING
+  TCP    127.0.0.1:14023        0.0.0.0:0              LISTENING
+  TCP    127.0.0.1:19434        0.0.0.0:0              LISTENING
+  TCP    127.0.0.1:49683        0.0.0.0:0              LISTENING
+  TCP    127.0.0.1:49699        0.0.0.0:0              LISTENING
+  TCP    127.0.0.1:50010        0.0.0.0:0              LISTENING
+  TCP    127.0.0.1:50018        0.0.0.0:0              LISTENING
+  TCP    [::]:135               [::]:0                 LISTENING
+  TCP    [::]:445               [::]:0                 LISTENING
+  TCP    [::]:808               [::]:0                 LISTENING
+  TCP    [::]:6088              [::]:0                 LISTENING
+  TCP    [::]:49664             [::]:0                 LISTENING
+  TCP    [::]:49665             [::]:0                 LISTENING
+  TCP    [::]:49666             [::]:0                 LISTENING
+  TCP    [::]:49668             [::]:0                 LISTENING
+  TCP    [::]:49676             [::]:0                 LISTENING
+  TCP    [::]:49689             [::]:0                 LISTENING
+  TCP    [::]:57323             [::]:0                 LISTENING
+  TCP    [::1]:49679            [::]:0                 LISTENING
+[5/10] netsh wlan show interfaces 
+--- [5] WI-FI INTERFACE INFO --- 
+
+There is 1 interface on the system: 
+
+    Name                   : WLAN
+    Description            : Intel(R) Wi-Fi 6 AX201 160MHz
+    GUID                   : 7222a747-ff1b-431b-92fd-d4d93e7cf6d3
+    Physical address       : 38:68:93:80:2b:f9
+    Interface type         : Primary
+    State                  : disconnected
+    Radio status           : Hardware On
+                             Software On
+
+    Hosted network status  : Not available
+
+[6/10] netsh wlan show all 
+--- [6] ALL WI-FI PROFILES AND INFO --- 
+Wireless System Information Summary
+(Time: 2026/9/3 17:12:56 ??????)
+
+
+======================================================================= 
+============================== SHOW DRIVERS =========================== 
+=======================================================================
+
+
+Interface name: WLAN
+
+    Driver                    : Intel(R) Wi-Fi 6 AX201 160MHz
+    Vendor                    : Intel Corporation
+    Provider                  : Intel
+    Date                      : 2024/5/1
+    Version                   : 23.60.1.2
+    INF file                  : oem199.inf
+    Type                      : Native Wi-Fi Driver
+    Radio types supported     : 802.11b 802.11g 802.11n 802.11a 802.11ac 802.11ax
+    FIPS 140-2 mode supported : Yes
+    802.11w Management Frame Protection supported : Yes
+    Hosted network supported  : No
+    Authentication and cipher supported in infrastructure mode:
+                                Open             None
+                                Open             WEP-40bit
+                                Open             WEP-104bit
+                                Open             WEP
+                                WPA-Enterprise   TKIP
+                                WPA-Enterprise   CCMP
+                                WPA-Personal     TKIP
+                                WPA-Personal     CCMP
+                                WPA2-Enterprise  TKIP
+                                WPA2-Enterprise  CCMP
+                                WPA2-Personal    TKIP
+                                WPA2-Personal    CCMP
+                                Open             Vendor defined
+                                WPA3-Personal    CCMP
+                                Vendor defined   Vendor defined
+                                WPA3-Enterprise 192 Bits GCMP-256
+                                OWE              CCMP
+    Number of supported bands : 2
+                                2.4 GHz [ 0 MHz - 0 MHz]
+                                5 GHz   [ 0 MHz - 0 MHz]
+    IHV service present       : Yes
+    IHV adapter OUI           : [00 00 00], type: [00]
+    IHV extensibility DLL path: C:\WINDOWS\system32\IntelIHVRouter10.dll
+    IHV UI extensibility ClSID: {00000000-0000-0000-0000-000000000000}
+    IHV diagnostics CLSID     : {00000000-0000-0000-0000-000000000000}
+    Wireless Display Supported: Yes (Graphics Driver: Yes, Wi-Fi Driver: Yes)
+
+
+======================================================================= 
+============================= SHOW INTERFACES ========================= 
+=======================================================================
+
+
+There is 1 interface on the system: 
+
+    Name                   : WLAN
+    Description            : Intel(R) Wi-Fi 6 AX201 160MHz
+    GUID                   : 7222a747-ff1b-431b-92fd-d4d93e7cf6d3
+    Physical address       : 38:68:93:80:2b:f9
+    Interface type         : Primary
+    State                  : disconnected
+    Radio status           : Hardware On
+                             Software On
+
+    Hosted network status  : Not available
+
+
+======================================================================= 
+=========================== SHOW HOSTED NETWORK ======================= 
+=======================================================================
+
+
+Hosted network settings 
+----------------------- 
+    Mode                   : Allowed
+    Settings               : <Not configured>
+
+Hosted network status   
+--------------------- 
+    Status                 : Not available
+
+
+======================================================================= 
+============================= SHOW SETTINGS =========================== 
+=======================================================================
+
+
+Wireless LAN settings 
+--------------------- 
+    Show blocked networks in visible network list: No
+
+    Only use GP profiles on GP-configured networks: No
+
+    Hosted network mode allowed in WLAN service: Yes
+
+    Allow shared user credentials for network authentication: Yes
+
+    Block period: Not Configured.
+
+    Auto configuration logic is enabled on interface "WLAN"
+    MAC randomization disabled on interface WLAN
+
+
+======================================================================= 
+============================== SHOW FILTERS =========================== 
+=======================================================================
+
+
+Allow list on the system (group policy) 
+--------------------------------------- 
+    <None>
+
+Allow list on the system (user) 
+------------------------------- 
+    <None>
+
+Block list on the system (group policy) 
+--------------------------------------- 
+    <None>
+
+Block list on the system (user) 
+------------------------------- 
+    <None>
+
+
+======================================================================= 
+=========================== SHOW CREATEALLUSER ======================== 
+=======================================================================
+
+
+Everyone is allowed to create all user profiles.
+
+
+======================================================================= 
+============================= SHOW PROFILES =========================== 
+=======================================================================
+
+
+Profiles on interface WLAN:
+
+Group policy profiles (read only)
+---------------------------------
+    <None>
+
+User profiles
+-------------
+    All User Profile     : HUAWEI-10G6OT
+    All User Profile     : Damon ?iPhone12 pro
+    All User Profile     : accb
+    All User Profile     : Xiaomi 13
+    All User Profile     : CMCC-sWEe
+    All User Profile     : TP-LINK_4A4A
+    All User Profile     : StrongestWiFi
+    All User Profile     : TP-LINK_8976
+    All User Profile     : damon&kelly
+    All User Profile     : ????
+    All User Profile     : bimt-guest
+    All User Profile     : ACBWEC-5G
+    All User Profile     : ACBWEC-2.4G
+    All User Profile     : CFDA-XZSLFWDT
+    All User Profile     : MGS
+    All User Profile     : ACCB
+    All User Profile     : accb-guest
+    All User Profile     : CU_GvUy
+
+
+======================================================================= 
+========================== SHOW PROFILES NAMES ======================== 
+=======================================================================
+
+
+Profile HUAWEI-10G6OT on interface WLAN: 
+======================================================================= 
+
+Applied: All User Profile    
+
+Profile information 
+------------------- 
+    Version                : 1
+    Type                   : Wireless LAN
+    Name                   : HUAWEI-10G6OT
+    Control options        : 
+        Connection mode    : Connect automatically
+        Network broadcast  : Connect only if this network is broadcasting
+        AutoSwitch         : Do not switch to other networks
+        MAC Randomization  : Disabled
+
+Connectivity settings 
+--------------------- 
+    Number of SSIDs        : 1
+    SSID name              : "HUAWEI-10G6OT"
+    Network type           : Infrastructure
+    Radio type             : [ Any Radio Type ]
+    Vendor extension          : Not present
+
+Security settings 
+----------------- 
+    Authentication         : WPA2-Personal
+    Cipher                 : CCMP
+    Authentication         : WPA2-Personal
+    Cipher                 : GCMP
+    Security key           : Present
+
+Cost settings 
+------------- 
+    Cost                   : Unrestricted
+    Congested              : No
+    Approaching Data Limit : No
+    Over Data Limit        : No
+    Roaming                : No
+    Cost Source            : Default
+
+
+Profile Damon ?iPhone12 pro on interface WLAN: 
+======================================================================= 
+
+Applied: All User Profile    
+
+Profile information 
+------------------- 
+    Version                : 1
+    Type                   : Wireless LAN
+    Name                   : Damon ?iPhone12 pro
+    Control options        : 
+        Connection mode    : Connect automatically
+        Network broadcast  : Connect only if this network is broadcasting
+        AutoSwitch         : Do not switch to other networks
+        MAC Randomization  : Disabled
+
+Connectivity settings 
+--------------------- 
+    Number of SSIDs        : 1
+    SSID name              : "Damon ??Phone12 pro"
+    Network type           : Infrastructure
+    Radio type             : [ Any Radio Type ]
+    Vendor extension          : Not present
+
+Security settings 
+----------------- 
+    Authentication         : WPA3-Personal
+    Cipher                 : CCMP
+    Authentication         : WPA2-Personal
+    Cipher                 : CCMP
+    Authentication         : WPA3-Personal
+    Cipher                 : GCMP
+    Authentication         : WPA2-Personal
+    Cipher                 : GCMP
+    Security key           : Present
+
+Cost settings 
+------------- 
+    Cost                   : Unrestricted
+    Congested              : No
+    Approaching Data Limit : No
+    Over Data Limit        : No
+    Roaming                : No
+    Cost Source            : Default
+
+
+Profile accb on interface WLAN: 
+======================================================================= 
+
+Applied: All User Profile    
+
+Profile information 
+------------------- 
+    Version                : 1
+    Type                   : Wireless LAN
+    Name                   : accb
+    Control options        : 
+        Connection mode    : Connect automatically
+        Network broadcast  : Connect only if this network is broadcasting
+        AutoSwitch         : Do not switch to other networks
+        MAC Randomization  : Disabled
+
+Connectivity settings 
+--------------------- 
+    Number of SSIDs        : 1
+    SSID name              : "accb"
+    Network type           : Infrastructure
+    Radio type             : [ Any Radio Type ]
+    Vendor extension          : Not present
+
+Security settings 
+----------------- 
+    Authentication         : WPA2-Personal
+    Cipher                 : CCMP
+    Authentication         : WPA2-Personal
+    Cipher                 : GCMP
+    Security key           : Present
+
+Cost settings 
+------------- 
+    Cost                   : Unrestricted
+    Congested              : No
+    Approaching Data Limit : No
+    Over Data Limit        : No
+    Roaming                : No
+    Cost Source            : Default
+
+
+Profile Xiaomi 13 on interface WLAN: 
+======================================================================= 
+
+Applied: All User Profile    
+
+Profile information 
+------------------- 
+    Version                : 1
+    Type                   : Wireless LAN
+    Name                   : Xiaomi 13
+    Control options        : 
+        Connection mode    : Connect automatically
+        Network broadcast  : Connect only if this network is broadcasting
+        AutoSwitch         : Do not switch to other networks
+        MAC Randomization  : Disabled
+
+Connectivity settings 
+--------------------- 
+    Number of SSIDs        : 1
+    SSID name              : "Xiaomi 13"
+    Network type           : Infrastructure
+    Radio type             : [ Any Radio Type ]
+    Vendor extension          : Not present
+
+Security settings 
+----------------- 
+    Authentication         : WPA2-Personal
+    Cipher                 : CCMP
+    Authentication         : WPA2-Personal
+    Cipher                 : GCMP
+    Security key           : Present
+
+Cost settings 
+------------- 
+    Cost                   : Unrestricted
+    Congested              : No
+    Approaching Data Limit : No
+    Over Data Limit        : No
+    Roaming                : No
+    Cost Source            : Default
+
+
+Profile CMCC-sWEe on interface WLAN: 
+======================================================================= 
+
+Applied: All User Profile    
+
+Profile information 
+------------------- 
+    Version                : 1
+    Type                   : Wireless LAN
+    Name                   : CMCC-sWEe
+    Control options        : 
+        Connection mode    : Connect automatically
+        Network broadcast  : Connect only if this network is broadcasting
+        AutoSwitch         : Do not switch to other networks
+        MAC Randomization  : Disabled
+
+Connectivity settings 
+--------------------- 
+    Number of SSIDs        : 1
+    SSID name              : "CMCC-sWEe"
+    Network type           : Infrastructure
+    Radio type             : [ Any Radio Type ]
+    Vendor extension          : Not present
+
+Security settings 
+----------------- 
+    Authentication         : WPA2-Personal
+    Cipher                 : CCMP
+    Authentication         : WPA2-Personal
+    Cipher                 : GCMP
+    Security key           : Present
+
+Cost settings 
+------------- 
+    Cost                   : Unrestricted
+    Congested              : No
+    Approaching Data Limit : No
+    Over Data Limit        : No
+    Roaming                : No
+    Cost Source            : Default
+
+
+Profile TP-LINK_4A4A on interface WLAN: 
+======================================================================= 
+
+Applied: All User Profile    
+
+Profile information 
+------------------- 
+    Version                : 1
+    Type                   : Wireless LAN
+    Name                   : TP-LINK_4A4A
+    Control options        : 
+        Connection mode    : Connect automatically
+        Network broadcast  : Connect only if this network is broadcasting
+        AutoSwitch         : Do not switch to other networks
+        MAC Randomization  : Disabled
+
+Connectivity settings 
+--------------------- 
+    Number of SSIDs        : 1
+    SSID name              : "TP-LINK_4A4A"
+    Network type           : Infrastructure
+    Radio type             : [ Any Radio Type ]
+    Vendor extension          : Not present
+
+Security settings 
+----------------- 
+    Authentication         : WPA2-Personal
+    Cipher                 : CCMP
+    Authentication         : WPA2-Personal
+    Cipher                 : GCMP
+    Security key           : Present
+
+Cost settings 
+------------- 
+    Cost                   : Unrestricted
+    Congested              : No
+    Approaching Data Limit : No
+    Over Data Limit        : No
+    Roaming                : No
+    Cost Source            : Default
+
+
+Profile StrongestWiFi on interface WLAN: 
+======================================================================= 
+
+Applied: All User Profile    
+
+Profile information 
+------------------- 
+    Version                : 1
+    Type                   : Wireless LAN
+    Name                   : StrongestWiFi
+    Control options        : 
+        Connection mode    : Connect automatically
+        Network broadcast  : Connect only if this network is broadcasting
+        AutoSwitch         : Do not switch to other networks
+        MAC Randomization  : Disabled
+
+Connectivity settings 
+--------------------- 
+    Number of SSIDs        : 1
+    SSID name              : "StrongestWiFi"
+    Network type           : Infrastructure
+    Radio type             : [ Any Radio Type ]
+    Vendor extension          : Not present
+
+Security settings 
+----------------- 
+    Authentication         : WPA2-Personal
+    Cipher                 : CCMP
+    Authentication         : WPA2-Personal
+    Cipher                 : GCMP
+    Security key           : Present
+
+Cost settings 
+------------- 
+    Cost                   : Unrestricted
+    Congested              : No
+    Approaching Data Limit : No
+    Over Data Limit        : No
+    Roaming                : No
+    Cost Source            : Default
+
+
+Profile TP-LINK_8976 on interface WLAN: 
+======================================================================= 
+
+Applied: All User Profile    
+
+Profile information 
+------------------- 
+    Version                : 1
+    Type                   : Wireless LAN
+    Name                   : TP-LINK_8976
+    Control options        : 
+        Connection mode    : Connect manually
+        Network broadcast  : Connect only if this network is broadcasting
+        AutoSwitch         : Do not switch to other networks
+        MAC Randomization  : Disabled
+
+Connectivity settings 
+--------------------- 
+    Number of SSIDs        : 1
+    SSID name              : "TP-LINK_8976"
+    Network type           : Infrastructure
+    Radio type             : [ Any Radio Type ]
+    Vendor extension          : Not present
+
+Security settings 
+----------------- 
+    Authentication         : WPA2-Personal
+    Cipher                 : CCMP
+    Authentication         : WPA2-Personal
+    Cipher                 : GCMP
+    Security key           : Present
+
+Cost settings 
+------------- 
+    Cost                   : Unrestricted
+    Congested              : No
+    Approaching Data Limit : No
+    Over Data Limit        : No
+    Roaming                : No
+    Cost Source            : Default
+
+
+Profile damon&kelly on interface WLAN: 
+======================================================================= 
+
+Applied: All User Profile    
+
+Profile information 
+------------------- 
+    Version                : 1
+    Type                   : Wireless LAN
+    Name                   : damon&kelly
+    Control options        : 
+        Connection mode    : Connect automatically
+        Network broadcast  : Connect only if this network is broadcasting
+        AutoSwitch         : Do not switch to other networks
+        MAC Randomization  : Disabled
+
+Connectivity settings 
+--------------------- 
+    Number of SSIDs        : 1
+    SSID name              : "damon&kelly"
+    Network type           : Infrastructure
+    Radio type             : [ Any Radio Type ]
+    Vendor extension          : Not present
+
+Security settings 
+----------------- 
+    Authentication         : WPA2-Personal
+    Cipher                 : CCMP
+    Authentication         : WPA2-Personal
+    Cipher                 : GCMP
+    Security key           : Present
+
+Cost settings 
+------------- 
+    Cost                   : Unrestricted
+    Congested              : No
+    Approaching Data Limit : No
+    Over Data Limit        : No
+    Roaming                : No
+    Cost Source            : Default
+
+
+Profile ???? on interface WLAN: 
+======================================================================= 
+
+Applied: All User Profile    
+
+Profile information 
+------------------- 
+    Version                : 1
+    Type                   : Wireless LAN
+    Name                   : ????
+    Control options        : 
+        Connection mode    : Connect automatically
+        Network broadcast  : Connect only if this network is broadcasting
+        AutoSwitch         : Do not switch to other networks
+        MAC Randomization  : Disabled
+
+Connectivity settings 
+--------------------- 
+    Number of SSIDs        : 1
+    SSID name              : "??????"
+    Network type           : Infrastructure
+    Radio type             : [ Any Radio Type ]
+    Vendor extension          : Not present
+
+Security settings 
+----------------- 
+    Authentication         : WPA2-Personal
+    Cipher                 : CCMP
+    Authentication         : WPA2-Personal
+    Cipher                 : GCMP
+    Security key           : Present
+
+Cost settings 
+------------- 
+    Cost                   : Unrestricted
+    Congested              : No
+    Approaching Data Limit : No
+    Over Data Limit        : No
+    Roaming                : No
+    Cost Source            : Default
+
+
+Profile bimt-guest on interface WLAN: 
+======================================================================= 
+
+Applied: All User Profile    
+
+Profile information 
+------------------- 
+    Version                : 1
+    Type                   : Wireless LAN
+    Name                   : bimt-guest
+    Control options        : 
+        Connection mode    : Connect automatically
+        Network broadcast  : Connect only if this network is broadcasting
+        AutoSwitch         : Do not switch to other networks
+        MAC Randomization  : Disabled
+
+Connectivity settings 
+--------------------- 
+    Number of SSIDs        : 1
+    SSID name              : "bimt-guest"
+    Network type           : Infrastructure
+    Radio type             : [ Any Radio Type ]
+    Vendor extension          : Not present
+
+Security settings 
+----------------- 
+    Authentication         : WPA2-Personal
+    Cipher                 : CCMP
+    Authentication         : WPA2-Personal
+    Cipher                 : GCMP
+    Security key           : Present
+
+Cost settings 
+------------- 
+    Cost                   : Unrestricted
+    Congested              : No
+    Approaching Data Limit : No
+    Over Data Limit        : No
+    Roaming                : No
+    Cost Source            : Default
+
+
+Profile ACBWEC-5G on interface WLAN: 
+======================================================================= 
+
+Applied: All User Profile    
+
+Profile information 
+------------------- 
+    Version                : 1
+    Type                   : Wireless LAN
+    Name                   : ACBWEC-5G
+    Control options        : 
+        Connection mode    : Connect automatically
+        Network broadcast  : Connect only if this network is broadcasting
+        AutoSwitch         : Do not switch to other networks
+        MAC Randomization  : Disabled
+
+Connectivity settings 
+--------------------- 
+    Number of SSIDs        : 1
+    SSID name              : "ACBWEC-5G"
+    Network type           : Infrastructure
+    Radio type             : [ Any Radio Type ]
+    Vendor extension          : Not present
+
+Security settings 
+----------------- 
+    Authentication         : WPA2-Personal
+    Cipher                 : CCMP
+    Authentication         : WPA2-Personal
+    Cipher                 : GCMP
+    Security key           : Present
+
+Cost settings 
+------------- 
+    Cost                   : Unrestricted
+    Congested              : No
+    Approaching Data Limit : No
+    Over Data Limit        : No
+    Roaming                : No
+    Cost Source            : Default
+
+
+Profile ACBWEC-2.4G on interface WLAN: 
+======================================================================= 
+
+Applied: All User Profile    
+
+Profile information 
+------------------- 
+    Version                : 1
+    Type                   : Wireless LAN
+    Name                   : ACBWEC-2.4G
+    Control options        : 
+        Connection mode    : Connect automatically
+        Network broadcast  : Connect only if this network is broadcasting
+        AutoSwitch         : Do not switch to other networks
+        MAC Randomization  : Disabled
+
+Connectivity settings 
+--------------------- 
+    Number of SSIDs        : 1
+    SSID name              : "ACBWEC-2.4G"
+    Network type           : Infrastructure
+    Radio type             : [ Any Radio Type ]
+    Vendor extension          : Not present
+
+Security settings 
+----------------- 
+    Authentication         : WPA2-Personal
+    Cipher                 : CCMP
+    Authentication         : WPA2-Personal
+    Cipher                 : GCMP
+    Security key           : Present
+
+Cost settings 
+------------- 
+    Cost                   : Unrestricted
+    Congested              : No
+    Approaching Data Limit : No
+    Over Data Limit        : No
+    Roaming                : No
+    Cost Source            : Default
+
+
+Profile CFDA-XZSLFWDT on interface WLAN: 
+======================================================================= 
+
+Applied: All User Profile    
+
+Profile information 
+------------------- 
+    Version                : 1
+    Type                   : Wireless LAN
+    Name                   : CFDA-XZSLFWDT
+    Control options        : 
+        Connection mode    : Connect automatically
+        Network broadcast  : Connect only if this network is broadcasting
+        AutoSwitch         : Do not switch to other networks
+        MAC Randomization  : Disabled
+
+Connectivity settings 
+--------------------- 
+    Number of SSIDs        : 1
+    SSID name              : "CFDA-XZSLFWDT"
+    Network type           : Infrastructure
+    Radio type             : [ Any Radio Type ]
+    Vendor extension          : Not present
+
+Security settings 
+----------------- 
+    Authentication         : WPA2-Personal
+    Cipher                 : CCMP
+    Authentication         : WPA2-Personal
+    Cipher                 : GCMP
+    Security key           : Present
+
+Cost settings 
+------------- 
+    Cost                   : Unrestricted
+    Congested              : No
+    Approaching Data Limit : No
+    Over Data Limit        : No
+    Roaming                : No
+    Cost Source            : Default
+
+
+Profile MGS on interface WLAN: 
+======================================================================= 
+
+Applied: All User Profile    
+
+Profile information 
+------------------- 
+    Version                : 1
+    Type                   : Wireless LAN
+    Name                   : MGS
+    Control options        : 
+        Connection mode    : Connect automatically
+        Network broadcast  : Connect only if this network is broadcasting
+        AutoSwitch         : Do not switch to other networks
+        MAC Randomization  : Disabled
+
+Connectivity settings 
+--------------------- 
+    Number of SSIDs        : 1
+    SSID name              : "MGS"
+    Network type           : Infrastructure
+    Radio type             : [ Any Radio Type ]
+    Vendor extension          : Not present
+
+Security settings 
+----------------- 
+    Authentication         : WPA2-Personal
+    Cipher                 : CCMP
+    Authentication         : WPA2-Personal
+    Cipher                 : GCMP
+    Security key           : Present
+
+Cost settings 
+------------- 
+    Cost                   : Unrestricted
+    Congested              : No
+    Approaching Data Limit : No
+    Over Data Limit        : No
+    Roaming                : No
+    Cost Source            : Default
+
+
+Profile ACCB on interface WLAN: 
+======================================================================= 
+
+Applied: All User Profile    
+
+Profile information 
+------------------- 
+    Version                : 1
+    Type                   : Wireless LAN
+    Name                   : ACCB
+    Control options        : 
+        Connection mode    : Connect automatically
+        Network broadcast  : Connect only if this network is broadcasting
+        AutoSwitch         : Do not switch to other networks
+        MAC Randomization  : Disabled
+
+Connectivity settings 
+--------------------- 
+    Number of SSIDs        : 1
+    SSID name              : "ACCB"
+    Network type           : Infrastructure
+    Radio type             : [ Any Radio Type ]
+    Vendor extension          : Not present
+
+Security settings 
+----------------- 
+    Authentication         : WPA2-Personal
+    Cipher                 : CCMP
+    Authentication         : WPA2-Personal
+    Cipher                 : GCMP
+    Security key           : Present
+
+Cost settings 
+------------- 
+    Cost                   : Unrestricted
+    Congested              : No
+    Approaching Data Limit : No
+    Over Data Limit        : No
+    Roaming                : No
+    Cost Source            : Default
+
+
+Profile accb-guest on interface WLAN: 
+======================================================================= 
+
+Applied: All User Profile    
+
+Profile information 
+------------------- 
+    Version                : 1
+    Type                   : Wireless LAN
+    Name                   : accb-guest
+    Control options        : 
+        Connection mode    : Connect automatically
+        Network broadcast  : Connect only if this network is broadcasting
+        AutoSwitch         : Do not switch to other networks
+        MAC Randomization  : Disabled
+
+Connectivity settings 
+--------------------- 
+    Number of SSIDs        : 1
+    SSID name              : "accb-guest"
+    Network type           : Infrastructure
+    Radio type             : [ Any Radio Type ]
+    Vendor extension          : Not present
+
+Security settings 
+----------------- 
+    Authentication         : WPA2-Personal
+    Cipher                 : CCMP
+    Authentication         : WPA2-Personal
+    Cipher                 : GCMP
+    Security key           : Present
+
+Cost settings 
+------------- 
+    Cost                   : Unrestricted
+    Congested              : No
+    Approaching Data Limit : No
+    Over Data Limit        : No
+    Roaming                : No
+    Cost Source            : Default
+
+
+Profile CU_GvUy on interface WLAN: 
+======================================================================= 
+
+Applied: All User Profile    
+
+Profile information 
+------------------- 
+    Version                : 1
+    Type                   : Wireless LAN
+    Name                   : CU_GvUy
+    Control options        : 
+        Connection mode    : Connect automatically
+        Network broadcast  : Connect only if this network is broadcasting
+        AutoSwitch         : Do not switch to other networks
+        MAC Randomization  : Disabled
+
+Connectivity settings 
+--------------------- 
+    Number of SSIDs        : 1
+    SSID name              : "CU_GvUy"
+    Network type           : Infrastructure
+    Radio type             : [ Any Radio Type ]
+    Vendor extension          : Not present
+
+Security settings 
+----------------- 
+    Authentication         : WPA2-Personal
+    Cipher                 : CCMP
+    Authentication         : WPA2-Personal
+    Cipher                 : GCMP
+    Security key           : Present
+
+Cost settings 
+------------- 
+    Cost                   : Unrestricted
+    Congested              : No
+    Approaching Data Limit : No
+    Over Data Limit        : No
+    Roaming                : No
+    Cost Source            : Default
+
+
+======================================================================= 
+======================= SHOW NETWORKS MODE=BSSID ====================== 
+=======================================================================
+
+ 
+Interface name : WLAN 
+There are 7 networks currently visible. 
+
+SSID 1 : LP-TEK
+    Network type            : Infrastructure
+    Authentication          : Open
+    Encryption              : None 
+    BSSID 1                 : 06:05:88:70:34:de
+         Signal             : 43%  
+         Radio type         : 802.11n
+         Band               : 2.4 GHz
+         Channel            : 6 
+         Basic rates (Mbps) : 11
+         Other rates (Mbps) : 6 9 12 18 24 36 48 54
+    BSSID 2                 : 06:b8:e6:0e:9b:04
+         Signal             : 80%  
+         Radio type         : 802.11n
+         Band               : 2.4 GHz
+         Channel            : 6 
+         Basic rates (Mbps) : 11
+         Other rates (Mbps) : 6 9 12 18 24 36 48 54
+    BSSID 3                 : 06:b8:e6:0e:9b:0c
+         Signal             : 78%  
+         Radio type         : 802.11ac
+         Band               : 5 GHz  
+         Channel            : 165 
+         Basic rates (Mbps) : 6 12 24
+         Other rates (Mbps) : 9 18 36 48 54
+    BSSID 4                 : 06:b8:e6:0e:9b:06
+         Signal             : 46%  
+         Radio type         : 802.11ac
+         Band               : 5 GHz  
+         Channel            : 153 
+         Basic rates (Mbps) : 6 12 24
+         Other rates (Mbps) : 9 18 36 48 54
+    BSSID 5                 : 06:b8:e6:0e:9b:0a
+         Signal             : 78%  
+         Radio type         : 802.11n
+         Band               : 2.4 GHz
+         Channel            : 11 
+         Basic rates (Mbps) : 11
+         Other rates (Mbps) : 6 9 12 18 24 36 48 54
+    BSSID 6                 : 06:b8:e6:0e:9b:05
+         Signal             : 50%  
+         Radio type         : 802.11ac
+         Band               : 5 GHz  
+         Channel            : 36 
+         Basic rates (Mbps) : 6 12 24
+         Other rates (Mbps) : 9 18 36 48 54
+    BSSID 7                 : 06:b8:e6:0e:9b:0b
+         Signal             : 78%  
+         Radio type         : 802.11ac
+         Band               : 5 GHz  
+         Channel            : 44 
+         Basic rates (Mbps) : 6 12 24
+         Other rates (Mbps) : 9 18 36 48 54
+
+SSID 2 : LP-LAB
+    Network type            : Infrastructure
+    Authentication          : Open
+    Encryption              : None 
+    BSSID 1                 : 12:05:88:70:34:de
+         Signal             : 46%  
+         Radio type         : 802.11n
+         Band               : 2.4 GHz
+         Channel            : 6 
+         Basic rates (Mbps) : 11
+         Other rates (Mbps) : 6 9 12 18 24 36 48 54
+
+SSID 3 : LP-WIFI
+    Network type            : Infrastructure
+    Authentication          : Open
+    Encryption              : None 
+    BSSID 1                 : 0e:05:88:70:34:de
+         Signal             : 46%  
+         Radio type         : 802.11n
+         Band               : 2.4 GHz
+         Channel            : 6 
+         Basic rates (Mbps) : 11
+         Other rates (Mbps) : 6 9 12 18 24 36 48 54
+    BSSID 2                 : 0e:b8:e6:0e:9b:04
+         Signal             : 75%  
+         Radio type         : 802.11n
+         Band               : 2.4 GHz
+         Channel            : 6 
+         Basic rates (Mbps) : 11
+         Other rates (Mbps) : 6 9 12 18 24 36 48 54
+    BSSID 3                 : 0e:b8:e6:0e:9b:0c
+         Signal             : 78%  
+         Radio type         : 802.11ac
+         Band               : 5 GHz  
+         Channel            : 165 
+         Basic rates (Mbps) : 6 12 24
+         Other rates (Mbps) : 9 18 36 48 54
+    BSSID 4                 : 0e:b8:e6:0e:9b:06
+         Signal             : 46%  
+         Radio type         : 802.11ac
+         Band               : 5 GHz  
+         Channel            : 153 
+         Basic rates (Mbps) : 6 12 24
+         Other rates (Mbps) : 9 18 36 48 54
+    BSSID 5                 : 0e:b8:e6:0e:9b:05
+         Signal             : 50%  
+         Radio type         : 802.11ac
+         Band               : 5 GHz  
+         Channel            : 36 
+         Basic rates (Mbps) : 6 12 24
+         Other rates (Mbps) : 9 18 36 48 54
+    BSSID 6                 : 0e:b8:e6:0e:9b:0a
+         Signal             : 78%  
+         Radio type         : 802.11n
+         Band               : 2.4 GHz
+         Channel            : 11 
+         Basic rates (Mbps) : 11
+         Other rates (Mbps) : 6 9 12 18 24 36 48 54
+    BSSID 7                 : 0e:b8:e6:0e:9b:0b
+         Signal             : 78%  
+         Radio type         : 802.11ac
+         Band               : 5 GHz  
+         Channel            : 44 
+         Basic rates (Mbps) : 6 12 24
+         Other rates (Mbps) : 9 18 36 48 54
+
+SSID 4 : LP-CIMS
+    Network type            : Infrastructure
+    Authentication          : Open
+    Encryption              : None 
+    BSSID 1                 : 16:05:88:70:34:de
+         Signal             : 43%  
+         Radio type         : 802.11n
+         Band               : 2.4 GHz
+         Channel            : 6 
+         Basic rates (Mbps) : 11
+         Other rates (Mbps) : 6 9 12 18 24 36 48 54
+
+SSID 5 : LP-OFFICE
+    Network type            : Infrastructure
+    Authentication          : Open
+    Encryption              : None 
+    BSSID 1                 : 0a:05:88:70:34:de
+         Signal             : 38%  
+         Radio type         : 802.11n
+         Band               : 2.4 GHz
+         Channel            : 6 
+         Basic rates (Mbps) : 11
+         Other rates (Mbps) : 6 9 12 18 24 36 48 54
+    BSSID 2                 : 0a:b8:e6:0e:9b:0c
+         Signal             : 78%  
+         Radio type         : 802.11ac
+         Band               : 5 GHz  
+         Channel            : 165 
+         Basic rates (Mbps) : 6 12 24
+         Other rates (Mbps) : 9 18 36 48 54
+    BSSID 3                 : 0a:b8:e6:0e:9b:06
+         Signal             : 46%  
+         Radio type         : 802.11ac
+         Band               : 5 GHz  
+         Channel            : 153 
+         Basic rates (Mbps) : 6 12 24
+         Other rates (Mbps) : 9 18 36 48 54
+    BSSID 4                 : 0a:b8:e6:0e:9b:0a
+         Signal             : 78%  
+         Radio type         : 802.11n
+         Band               : 2.4 GHz
+         Channel            : 11 
+         Basic rates (Mbps) : 11
+         Other rates (Mbps) : 6 9 12 18 24 36 48 54
+    BSSID 5                 : 0a:b8:e6:0e:9b:05
+         Signal             : 50%  
+         Radio type         : 802.11ac
+         Band               : 5 GHz  
+         Channel            : 36 
+         Basic rates (Mbps) : 6 12 24
+         Other rates (Mbps) : 9 18 36 48 54
+    BSSID 6                 : 0a:b8:e6:0e:9b:0b
+         Signal             : 78%  
+         Radio type         : 802.11ac
+         Band               : 5 GHz  
+         Channel            : 44 
+         Basic rates (Mbps) : 6 12 24
+         Other rates (Mbps) : 9 18 36 48 54
+    BSSID 7                 : 0a:b8:e6:0e:9b:04
+         Signal             : 80%  
+         Radio type         : 802.11n
+         Band               : 2.4 GHz
+         Channel            : 6 
+         Basic rates (Mbps) : 11
+         Other rates (Mbps) : 6 9 12 18 24 36 48 54
+
+SSID 6 : accb-5G
+    Network type            : Infrastructure
+    Authentication          : WPA2-Personal
+    Encryption              : CCMP 
+    BSSID 1                 : 64:05:e9:4a:24:88
+         Signal             : 85%  
+         Radio type         : 802.11ac
+         Band               : 5 GHz  
+         Channel            : 44 
+         Bss Load:
+             Connected Stations:         6
+             Channel Utilization:        5 (1 %)
+             Medium Available Capacity:  0 (0 us/s)
+         Basic rates (Mbps) : 6 12 24
+         Other rates (Mbps) : 9 18 36 48 54
+    BSSID 2                 : 64:05:e9:4f:86:98
+         Signal             : 91%  
+         Radio type         : 802.11ac
+         Band               : 5 GHz  
+         Channel            : 157 
+         Bss Load:
+             Connected Stations:         9
+             Channel Utilization:        8 (3 %)
+             Medium Available Capacity:  0 (0 us/s)
+         Basic rates (Mbps) : 6 12 24
+         Other rates (Mbps) : 9 18 36 48 54
+
+SSID 7 : accb
+    Network type            : Infrastructure
+    Authentication          : WPA2-Personal
+    Encryption              : CCMP 
+    BSSID 1                 : 64:05:e9:4f:86:90
+         Signal             : 99%  
+         Radio type         : 802.11n
+         Band               : 2.4 GHz
+         Channel            : 6 
+         Bss Load:
+             Connected Stations:         3
+             Channel Utilization:        30 (11 %)
+             Medium Available Capacity:  0 (0 us/s)
+         Basic rates (Mbps) : 1 2 5.5 11
+         Other rates (Mbps) : 6 9 12 18 24 36 48 54
+    BSSID 2                 : 64:05:e9:4a:24:80
+         Signal             : 91%  
+         Radio type         : 802.11n
+         Band               : 2.4 GHz
+         Channel            : 11 
+         Bss Load:
+             Connected Stations:         4
+             Channel Utilization:        15 (5 %)
+             Medium Available Capacity:  0 (0 us/s)
+         Basic rates (Mbps) : 1 2 5.5 11
+         Other rates (Mbps) : 6 9 12 18 24 36 48 54
+
+
+======================================================================= 
+======================= SHOW INTERFACE CAPABILITIES =================== 
+=======================================================================
+
+
+Wireless System Capabilities 
+---------------------------- 
+    Number of antennas connected to the 802.11 radio (value not available)
+    Max number of channels the device can operate on, simultaneously (value not available)
+    Co-existence Support                        : Unknown
+
+
+Wireless Device Capabilities 
+---------------------------- 
+
+Interface name: WLAN
+
+    WDI Version (Windows)                       : 0.1.1.12
+    WDI Version (IHV)                           : 0.1.1.12
+    WiFiCx Version (IHV)                        : WiFiCx Interface Not Supported
+    Firmware Version                            : D4.DF
+    Station                                     : Supported
+    Soft AP                                     : Not supported
+    Network monitor mode                        : Not supported
+    Wi-Fi Direct Device                         : Supported
+    Wi-Fi Direct GO                             : Supported
+    Wi-Fi Direct Client                         : Supported
+    Protected Management Frames                 : Supported
+    DOT11k neighbor report                      : Supported
+    ANQP Service Information Discovery          : Supported
+    Action Frame                                : Supported
+    Diversity Antenna                           : Supported
+    IBSS                                        : Not Supported
+    Promiscuous Mode                            : Not Supported
+    P2P Device Discovery                        : Supported
+    P2P Service Name Discovery                  : Supported
+    P2P Service Info Discovery                  : Not Supported
+    P2P Background Discovery                    : Supported
+    P2P GO on 5 GHz                             : Supported
+    ASP 2.0 Service Name Discovery              : Not Supported
+    ASP 2.0 Service Information Discovery       : Not Supported
+    IP Docking Capable                          : Not Supported
+    FIPS                                        : Supported
+    Instant Connect                             : Supported
+    Dx Standby NLO                              : Supported
+    Extended Channel Switch Announcement        : Supported
+    Function Level Reset                        : Supported
+    Platform Level Reset                        : Supported
+    Bus Level Reset                             : Supported
+    MAC Randomization                           : Supported
+    Fast Transition                             : Supported
+    MU-MIMO                                     : Supported
+    Miracast Sink                               : Supported
+    BSS Transition (802.11v)                    : Supported
+    IHV Extensibility Module Configured         : Supported
+    SAE Authentication                          : Supported
+    SAE Hash-to-Element Authentication          : Supported
+    WPA3 SUITE-B Authentication                 : Supported
+    WPA3 SUITE-B FIPS Mode                      : Not Supported
+    OWE Authentication                          : Supported
+    FTM as Initiator                            : Not Supported
+    MBO Support                                 : Supported
+    Number of Tx Spatial Streams                : 2
+    Number of Rx Spatial Streams                : 2
+    Number of Concurrent Channels Supported     : 0
+    P2P GO ports count                          : 1
+    P2P Clients Port Count                      : 1
+    P2P Max Mobile AP Clients                   : 8
+    Max ANQP Service Advertisements Supported   : 0
+    Maximum Number of Secondary STAs supported  : 0
+    Number of MultiLink Connections supported   : 0
+    Co-existence Support                        : Wi-Fi performance is maintained
+
+
+[7/10] firewall state 
+--- [7] WINDOWS FIREWALL STATE --- 
+
+Domain Profile Settings: 
+----------------------------------------------------------------------
+State                                 ON
+Firewall Policy                       BlockInbound,AllowOutbound
+LocalFirewallRules                    N/A (GPO-store only)
+LocalConSecRules                      N/A (GPO-store only)
+InboundUserNotification               Enable
+RemoteManagement                      Disable
+UnicastResponseToMulticast            Enable
+
+Logging:
+LogAllowedConnections                 Disable
+LogDroppedConnections                 Disable
+FileName                              %systemroot%\system32\LogFiles\Firewall\pfirewall.log
+MaxFileSize                           4096
+
+
+Private Profile Settings: 
+----------------------------------------------------------------------
+State                                 ON
+Firewall Policy                       BlockInbound,AllowOutbound
+LocalFirewallRules                    N/A (GPO-store only)
+LocalConSecRules                      N/A (GPO-store only)
+InboundUserNotification               Enable
+RemoteManagement                      Disable
+UnicastResponseToMulticast            Enable
+
+Logging:
+LogAllowedConnections                 Disable
+LogDroppedConnections                 Disable
+FileName                              %systemroot%\system32\LogFiles\Firewall\pfirewall.log
+MaxFileSize                           4096
+
+
+Public Profile Settings: 
+----------------------------------------------------------------------
+State                                 ON
+Firewall Policy                       BlockInbound,AllowOutbound
+LocalFirewallRules                    N/A (GPO-store only)
+LocalConSecRules                      N/A (GPO-store only)
+InboundUserNotification               Enable
+RemoteManagement                      Disable
+UnicastResponseToMulticast            Enable
+
+Logging:
+LogAllowedConnections                 Disable
+LogDroppedConnections                 Disable
+FileName                              %systemroot%\system32\LogFiles\Firewall\pfirewall.log
+MaxFileSize                           4096
+
+Ok.
+
+[8/10] arp table 
+--- [8] ARP TABLE --- 
+
+Interface: 10.200.16.100 --- 0xf
+  Internet Address      Physical Address      Type
+  10.200.16.110         e6-49-7e-c6-19-fb     dynamic   
+  10.200.17.210         44-37-e6-b8-5b-53     dynamic   
+  10.200.17.235         00-26-73-31-eb-99     dynamic   
+  10.200.17.254         24-e9-b3-84-ee-47     dynamic   
+  10.200.17.255         ff-ff-ff-ff-ff-ff     static    
+  224.0.0.22            01-00-5e-00-00-16     static    
+  224.0.0.251           01-00-5e-00-00-fb     static    
+  224.0.0.252           01-00-5e-00-00-fc     static    
+  239.192.152.143       01-00-5e-40-98-8f     static    
+  239.255.255.250       01-00-5e-7f-ff-fa     static    
+  255.255.255.255       ff-ff-ff-ff-ff-ff     static    
+[9/10] DNS test 
+--- [9] DNS RESOLUTION TEST --- 
+*** Request to UnKnown timed-out
+
+DNS request timed out.
+    timeout was 2 seconds.
+Server:  UnKnown
+Address:  10.200.20.3
+
+DNS request timed out.
+    timeout was 2 seconds.
+DNS request timed out.
+    timeout was 2 seconds.
+DNS request timed out.
+    timeout was 2 seconds.
+DNS request timed out.
+    timeout was 2 seconds.
+[10/10] PowerShell Test-NetConnection 
+--- [10] DETAILED CONNECTIVITY (PowerShell) --- 
+
+
+ComputerName           : internetbeacon.msedge.net
+RemoteAddress          : 13.107.4.52
+InterfaceAlias         : ??? 2
+SourceAddress          : 10.200.16.100
+PingSucceeded          : True
+PingReplyDetails (RTT) : 71 ms
+
+
+
+ 
+=================================================== 
+PLEASE ALSO PROVIDE THE FOLLOWING MANUALLY: 
+1. Phone OS: iOS / Android and version 
+2. Wi-Fi name the phone is connected to 
+3. Phone IP address (from Wi-Fi settings) 
+4. The port your app uses (e.g. 8080) 
+5. The full URL you typed in the browser 
+=================================================== 

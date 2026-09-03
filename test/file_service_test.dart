@@ -3,10 +3,45 @@ import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:excel_app/network_tools/file_service.dart';
+import 'package:excel_app/utils/app_log.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 /// 验证上传完成后 FileServer 会通知页面更新已接收文件状态。
 void main() {
+  test('completes initialization after the service starts listening', () async {
+    final saveDir = await Directory.systemTemp.createTemp('excel_app_init_');
+    addTearDown(() => saveDir.delete(recursive: true));
+    final server = FileServer(port: 18082, saveDir: saveDir);
+    addTearDown(server.release);
+
+    await server.init().timeout(const Duration(seconds: 1));
+
+    final client = HttpClient();
+    final request = await client.get('127.0.0.1', 18082, '/');
+    final response = await request.close();
+    expect(response.statusCode, HttpStatus.ok);
+    await response.drain<void>();
+    client.close();
+  });
+
+  test('records a log when the service port cannot be bound', () async {
+    final saveDir = await Directory.systemTemp.createTemp('excel_app_bind_');
+    final logDir = await Directory.systemTemp.createTemp('excel_app_log_');
+    addTearDown(() async {
+      await saveDir.delete(recursive: true);
+      await logDir.delete(recursive: true);
+    });
+    await AppLog.initialize(directory: logDir);
+    final blocker = await HttpServer.bind(InternetAddress.anyIPv4, 0);
+    addTearDown(blocker.close);
+
+    final server = FileServer(port: blocker.port, saveDir: saveDir);
+
+    await expectLater(server.init(), throwsA(isA<Object>()));
+
+    expect(await AppLog.read(), contains('[FileServer][init] failed'));
+  });
+
   test('notifies when a file upload is completed', () async {
     final saveDir = await Directory.systemTemp.createTemp('excel_app_test_');
     final server = FileServer(port: 18080, saveDir: saveDir);

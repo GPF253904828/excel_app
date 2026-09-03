@@ -20,6 +20,8 @@ class MainActivity: FlutterActivity() {
             .setMethodCallHandler { call, result ->
                 if (call.method == "getWifiIp") {
                     result.success(getWifiIp())
+                } else if (call.method == "getWifiSsid") {
+                    result.success(getWifiSsid())
                 } else {
                     result.notImplemented()
                 }
@@ -54,6 +56,21 @@ class MainActivity: FlutterActivity() {
                 val ip = wifiManager?.connectionInfo?.ipAddress ?: 0
                 if (ip == 0) null else formatIpv4(ip)
             }
+        } catch (_: SecurityException) {
+            null
+        } catch (_: Exception) {
+            null
+        }
+    }
+
+    /// Returns the current Wi-Fi name when Android permits access to it.
+    private fun getWifiSsid(): String? {
+        return try {
+            val wifiManager =
+                applicationContext.getSystemService(Context.WIFI_SERVICE) as? WifiManager
+            wifiManager?.connectionInfo?.ssid
+                ?.trim('"')
+                ?.takeIf { it.isNotEmpty() && it != "<unknown ssid>" }
         } catch (_: SecurityException) {
             null
         } catch (_: Exception) {

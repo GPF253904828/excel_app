@@ -3,6 +3,7 @@ import 'package:excel_app/network_tools/csv_exporter.dart';
 import 'package:excel_app/network_tools/file_service.dart';
 import 'package:excel_app/network_tools/xls_reader.dart';
 import 'package:excel_app/utils/app_log.dart';
+import 'package:excel_app/utils/diagnostics_service.dart';
 import 'package:flutter/foundation.dart';
 import 'package:path_provider/path_provider.dart';
 
@@ -12,6 +13,7 @@ class HomePageController extends ChangeNotifier {
   FileServer? _fileServer;
   Directory? _saveDir;
   String? _localIp;
+  String? _networkInfo;
   String _status = '未启动';
   String? _receivedNotice;
   String? _pendingExportFilename;
@@ -24,6 +26,7 @@ class HomePageController extends ChangeNotifier {
   HomePageController({this.port = 8080});
 
   String? get localIp => _localIp;
+  String? get networkInfo => _networkInfo;
   String get status => _status;
   bool get isRunning => _fileServer != null;
   bool get hasFiles => _hasFiles;
@@ -51,7 +54,9 @@ class HomePageController extends ChangeNotifier {
       _saveDir = Directory('${appDir.path}/received')
         ..createSync(recursive: true);
       refreshFiles();
-    } catch (error) {
+    } catch (error, stackTrace) {
+      AppLog.error(
+          '[HomePageController][initialize] failed', error, stackTrace);
       _status = '启动失败: $error';
       _notifyListeners();
     }
@@ -82,20 +87,32 @@ class HomePageController extends ChangeNotifier {
 
     try {
       _localIp = await getLocalIp();
+      _networkInfo = await collectNetworkInfo();
       if (_disposed) return;
 
       final server = FileServer(port: port, saveDir: _saveDir!);
       server.onFilesReceived = _onFilesReceived;
       server.onReplaceExistingFiles = onConfirmReplace;
       server.onExportDownloaded = _onExportDownloaded;
+      await server.init();
+      if (_disposed) {
+        server.release();
+        return;
+      }
+
       _fileServer = server;
       _status = '运行中';
-      AppLog.info('[FileServer][started] localIp=$_localIp port=$port');
+      final boundPort = server.boundPort ?? port;
+      AppLog.info('[FileServer][started] localIp=$_localIp port=$boundPort');
+      await collectDiagnostics(
+        serverStatus: _status,
+        serverPort: boundPort,
+        serverLocalIp: _localIp,
+      );
       _notifyListeners();
-
-      // FileServer.init() 持续监听请求，直到 release() 关闭服务。
-      server.init();
-    } catch (error) {
+    } catch (error, stackTrace) {
+      AppLog.error('[FileServer][start] failed localIp=$_localIp port=$port',
+          error, stackTrace);
       _status = '启动失败: $error';
       _notifyListeners();
     }

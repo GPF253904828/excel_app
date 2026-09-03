@@ -22,12 +22,33 @@ class ExportPage extends StatefulWidget {
 }
 
 class _ExportPageState extends State<ExportPage> {
+  bool _starting = true;
   bool _exporting = false;
   String? _notice;
 
+  @override
+  void initState() {
+    super.initState();
+    _startServer();
+  }
+
+  /// 进入导出页时自动启动文件服务。
+  Future<void> _startServer() async {
+    try {
+      await widget.controller.startServer();
+      if (mounted && !widget.controller.isRunning) {
+        setState(() => _notice = '启动失败: ${widget.controller.status}');
+      }
+    } catch (error) {
+      if (mounted) setState(() => _notice = '启动失败: $error');
+    } finally {
+      if (mounted) setState(() => _starting = false);
+    }
+  }
+
   /// 启动服务后将二维码 ZIP 排队给电脑浏览器下载。
   Future<void> _exportQrArchive() async {
-    if (_exporting) return;
+    if (_starting || _exporting) return;
     setState(() {
       _exporting = true;
       _notice = null;
@@ -55,6 +76,7 @@ class _ExportPageState extends State<ExportPage> {
         title: '导出二维码',
         status: widget.controller.status,
         localIp: widget.controller.localIp,
+        networkInfo: widget.controller.networkInfo,
         port: widget.controller.port,
         isRunning: widget.controller.isRunning,
         hasFiles: false,
@@ -70,15 +92,16 @@ class _ExportPageState extends State<ExportPage> {
           children: [
             FilledButton.icon(
               key: const Key('export-qr-archive'),
-              onPressed: _exporting ? null : _exportQrArchive,
-              icon: _exporting
+              onPressed: _starting || _exporting ? null : _exportQrArchive,
+              icon: _starting || _exporting
                   ? const SizedBox(
                       width: 18,
                       height: 18,
                       child: CircularProgressIndicator(strokeWidth: 2),
                     )
                   : const Icon(Icons.file_upload_outlined),
-              label: const Text('导出二维码'),
+              label: Text(
+                  _starting ? '启动服务中...' : (_exporting ? '处理中...' : '导出二维码')),
             ),
             if (_notice != null) ...[
               const SizedBox(height: 8),
@@ -86,7 +109,7 @@ class _ExportPageState extends State<ExportPage> {
                 _notice!,
                 textAlign: TextAlign.center,
                 style: TextStyle(
-                  color: _notice!.startsWith('导出失败')
+                  color: _notice!.contains('失败')
                       ? Theme.of(context).colorScheme.error
                       : Theme.of(context).colorScheme.primary,
                 ),

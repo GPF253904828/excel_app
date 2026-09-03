@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:io';
 import 'dart:typed_data';
 
+import 'package:excel_app/utils/app_log.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 
@@ -30,6 +31,9 @@ class FileServer {
 
   String? get pendingExportFilename => _pendingExportName;
 
+  /// 返回系统实际分配的监听端口。
+  int? get boundPort => _server?.port;
+
   /// 排队一个等待电脑浏览器下载的文件及其 MIME 类型。
   void queueExport(
     Uint8List bytes,
@@ -41,27 +45,48 @@ class FileServer {
     _pendingExportContentType = contentType;
   }
 
+  /// 绑定服务端口；返回时表示端口已经成功监听。
   Future<void> init() async {
     _saveDir.createSync(recursive: true);
-
-    final server = await HttpServer.bind(InternetAddress.anyIPv4, _port);
-    _server = server;
-    debugPrint('文件服务已启动: http://${await getLocalIp()}:$_port');
-
-    await for (final HttpRequest request in server) {
-      if (request.method == 'GET') {
-        if (request.uri.path == '/export') {
-          await _handleExport(request);
-        } else {
-          _handleGet(request);
-        }
-      } else if (request.method == 'POST' && request.uri.path == '/upload') {
-        await _handleUpload(request);
-      } else {
-        request.response.statusCode = HttpStatus.notFound;
-        await request.response.close();
-      }
+    try {
+      final server = await HttpServer.bind(InternetAddress.anyIPv4, _port);
+      _server = server;
+      debugPrint('文件服务已启动: http://${await getLocalIp()}:${server.port}');
+      _listen(server);
+    } catch (error, stackTrace) {
+      AppLog.error('[FileServer][init] failed port=$_port', error, stackTrace);
+      rethrow;
     }
+  }
+
+  /// 在端口绑定成功后持续处理浏览器请求。
+  void _listen(HttpServer server) {
+    server.listen((request) async {
+      try {
+        if (request.method == 'GET') {
+          if (request.uri.path == '/export') {
+            await _handleExport(request);
+          } else {
+            _handleGet(request);
+          }
+        } else if (request.method == 'POST' && request.uri.path == '/upload') {
+          await _handleUpload(request);
+        } else {
+          request.response.statusCode = HttpStatus.notFound;
+          await request.response.close();
+        }
+      } catch (error, stackTrace) {
+        AppLog.error('[FileServer][request] failed path=${request.uri.path}',
+            error, stackTrace);
+        try {
+          request.response.statusCode = HttpStatus.internalServerError;
+          await request.response.close();
+        } catch (_) {}
+      }
+    }, onError: (Object error, StackTrace stackTrace) {
+      AppLog.error(
+          '[FileServer][listen] failed port=$_port', error, stackTrace);
+    });
   }
 
   void _handleGet(HttpRequest request) {
@@ -478,4 +503,16 @@ Future<String?> getLocalIp() async {
     // 没有可用网络信息时仍允许服务继续启动。
   }
   return null;
+}
+
+/// 获取当前 Wi-Fi 名称；系统限制或非 Android 平台返回 null。
+Future<String?> getWifiSsid() async {
+  if (!Platform.isAndroid) return null;
+  try {
+    final ssid = await _networkChannel.invokeMethod<String>('getWifiSsid');
+    if (ssid == null || ssid.isEmpty || ssid == '<unknown ssid>') return null;
+    return ssid;
+  } catch (_) {
+    return null;
+  }
 }

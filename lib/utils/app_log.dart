@@ -15,10 +15,13 @@ class AppLog {
     final targetDirectory = directory ?? await getApplicationSupportDirectory();
     await targetDirectory.create(recursive: true);
     _file = File('${targetDirectory.path}/app.log');
+    await _file!.create();
     _logger = Logger(
+      filter: ProductionFilter(),
       printer: PrettyPrinter(methodCount: 0, errorMethodCount: 0),
       output: _FileLogOutput(_file!),
     );
+    info('[AppLog][initialized] path=${_file!.path}');
   }
 
   /// 写入普通诊断信息；日志尚未初始化时忽略，避免影响主流程。

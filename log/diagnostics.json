@@ -1,0 +1,88 @@
+{
+  "capturedAt": "2026-09-03T14:54:01.826989",
+  "operatingSystem": "android",
+  "operatingSystemVersion": "AQ3A.240912.001",
+  "localHostname": "localhost",
+  "dartVersion": "2.19.6 (stable) (Tue Mar 28 13:41:04 2023 +0000) on \"android_arm64\"",
+  "networkInterfaces": [
+    {
+      "name": "lo",
+      "addresses": [
+        {
+          "address": "127.0.0.1",
+          "type": "IPv4",
+          "isLoopback": true,
+          "isLinkLocal": false
+        },
+        {
+          "address": "::1%1",
+          "type": "IPv6",
+          "isLoopback": true,
+          "isLinkLocal": false
+        }
+      ]
+    },
+    {
+      "name": "wlan0",
+      "addresses": [
+        {
+          "address": "10.200.16.15",
+          "type": "IPv4",
+          "isLoopback": false,
+          "isLinkLocal": false
+        },
+        {
+          "address": "fe80::603f:49ff:fe17:e528%wlan0",
+          "type": "IPv6",
+          "isLoopback": false,
+          "isLinkLocal": true
+        }
+      ]
+    },
+    {
+      "name": "dummy0",
+      "addresses": [
+        {
+          "address": "fe80::2cac:1cff:fe8f:f694%dummy0",
+          "type": "IPv6",
+          "isLoopback": false,
+          "isLinkLocal": true
+        }
+      ]
+    },
+    {
+      "name": "rmnet_data0",
+      "addresses": [
+        {
+          "address": "fe80::208e:86ff:fee9:f45%rmnet_data0",
+          "type": "IPv6",
+          "isLoopback": false,
+          "isLinkLocal": true
+        }
+      ]
+    },
+    {
+      "name": "rmnet_data1",
+      "addresses": [
+        {
+          "address": "2409:8100:38d:3cca:86c:a6ff:fef4:2683%21",
+          "type": "IPv6",
+          "isLoopback": false,
+          "isLinkLocal": false
+        },
+        {
+          "address": "fe80::86c:a6ff:fef4:2683%rmnet_data1",
+          "type": "IPv6",
+          "isLoopback": false,
+          "isLinkLocal": true
+        }
+      ]
+    }
+  ],
+  "server": {
+    "status": "运行中",
+    "port": 8080,
+    "localIp": "10.200.16.15",
+    "url": "http://10.200.16.15:8080"
+  }
+}
