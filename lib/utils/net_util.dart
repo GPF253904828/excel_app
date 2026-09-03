@@ -2,6 +2,7 @@
 
 import 'dart:convert';
 import 'package:http/http.dart' as http;
+import 'package:excel_app/utils/app_log.dart';
 
 /// 设备表脚本接口封装（对应 WPS 端 JS 脚本的 query/modify/add/delete 四类操作）
 class DeviceApi {
@@ -18,25 +19,38 @@ class DeviceApi {
     };
     final encodedRequestBody = jsonEncode(requestBody);
     print('[DeviceApi][config] webhook=$webhook token=$token');
+    AppLog.info(
+        '[DeviceApi][config] webhook=$webhook token=${_maskToken(token)}');
     print(
       '[DeviceApi][request] method=POST url=$webhook '
       'headers={AirScript-Token: $token, Content-Type: application/json} '
       'body=$encodedRequestBody',
     );
+    AppLog.info(
+        '[DeviceApi][request] method=POST url=$webhook body=$encodedRequestBody');
 
-    final resp = await http.post(
-      Uri.parse(webhook),
-      headers: {
-        'AirScript-Token': token,
-        'Content-Type': 'application/json',
-      },
-      body: encodedRequestBody,
-    );
+    late http.Response resp;
+    try {
+      resp = await http.post(
+        Uri.parse(webhook),
+        headers: {
+          'AirScript-Token': token,
+          'Content-Type': 'application/json',
+        },
+        body: encodedRequestBody,
+      );
+    } catch (error, stackTrace) {
+      AppLog.error(
+          '[DeviceApi][error] request failed url=$webhook', error, stackTrace);
+      rethrow;
+    }
     final responseBody = utf8.decode(resp.bodyBytes, allowMalformed: true);
     print(
       '[DeviceApi][response] status=${resp.statusCode} '
       'headers=${resp.headers} body=$responseBody',
     );
+    AppLog.info(
+        '[DeviceApi][response] status=${resp.statusCode} body=$responseBody');
 
     if (resp.statusCode != 200) {
       throw DeviceApiException('HTTP ${resp.statusCode}: $responseBody');
@@ -53,6 +67,12 @@ class DeviceApi {
     final data = json['data'] as Map<String, dynamic>? ?? {};
     final result = (data['result'] as Map<String, dynamic>?) ?? {};
     return result;
+  }
+
+  /// 脱敏保存接口令牌，避免诊断日志暴露完整凭据。
+  static String _maskToken(String token) {
+    if (token.length <= 4) return '****';
+    return '${token.substring(0, 2)}****${token.substring(token.length - 2)}';
   }
 
   /// 统一调用脚本接口并解析单条设备操作结果。

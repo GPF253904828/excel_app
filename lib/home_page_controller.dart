@@ -1,8 +1,8 @@
 import 'dart:io';
-
 import 'package:excel_app/network_tools/csv_exporter.dart';
 import 'package:excel_app/network_tools/file_service.dart';
 import 'package:excel_app/network_tools/xls_reader.dart';
+import 'package:excel_app/utils/app_log.dart';
 import 'package:flutter/foundation.dart';
 import 'package:path_provider/path_provider.dart';
 
@@ -90,6 +90,7 @@ class HomePageController extends ChangeNotifier {
       server.onExportDownloaded = _onExportDownloaded;
       _fileServer = server;
       _status = '运行中';
+      AppLog.info('[FileServer][started] localIp=$_localIp port=$port');
       _notifyListeners();
 
       // FileServer.init() 持续监听请求，直到 release() 关闭服务。
@@ -139,12 +140,27 @@ class HomePageController extends ChangeNotifier {
     _notifyListeners();
   }
 
+  /// 将诊断日志排队到电脑页面的导出接口，供大厅诊断页上传。
+  Future<void> exportLogFile() async {
+    final server = _fileServer;
+    if (server == null) throw StateError('文件服务未启动，请先打开本地页面');
+    final bytes = Uint8List.fromList(await AppLog.readBytes());
+    server.queueExport(
+      bytes,
+      'app.log',
+      contentType: 'text/plain; charset=utf-8',
+    );
+    _pendingExportFilename = 'app.log';
+    _notifyListeners();
+  }
+
   /// 停止文件服务并更新首页状态。
   void stopServer() {
     _fileServer?.release();
     _fileServer = null;
     _pendingExportFilename = null;
     _status = '已停止';
+    AppLog.info('[FileServer][stopped] port=$port');
     _notifyListeners();
   }
 

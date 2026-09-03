@@ -2,11 +2,13 @@ import 'package:excel_app/export_page.dart';
 import 'package:excel_app/device_detail_page.dart';
 import 'package:excel_app/home_page_controller.dart';
 import 'package:excel_app/home_page_view.dart';
+import 'package:excel_app/log_diagnostics_page.dart';
 import 'package:excel_app/local_page.dart';
 import 'package:excel_app/online/online_config_store.dart';
 import 'package:excel_app/online/online_page.dart';
 import 'package:excel_app/scanner_page.dart';
 import 'package:excel_app/utils/net_util.dart';
+import 'package:excel_app/utils/diagnostics_service.dart';
 import 'package:excel_app/utils/toast_util.dart';
 import 'package:flutter/material.dart';
 
@@ -21,12 +23,14 @@ class HomePage extends StatefulWidget {
   final OnlineConfigStore configStore;
   final OnlineDeviceQueryCallback? onQuery;
   final DeviceListCallback? onList;
+  final LogUploadCallback? onUploadLogs;
 
   const HomePage({
     super.key,
     this.configStore = const OnlineConfigStore(),
     this.onQuery,
     this.onList,
+    this.onUploadLogs,
   });
 
   @override
@@ -57,6 +61,23 @@ class _HomePageState extends State<HomePage> {
             controller: _controller,
             archive: archive,
             filename: filename,
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// 打开诊断日志页面，上传目标由调用方按环境注入。
+  void _showDiagnostics() {
+    Navigator.push<void>(
+      context,
+      MaterialPageRoute(
+        builder: (_) => LogDiagnosticsPage(
+          onUpload: widget.onUploadLogs,
+          onShare: () => shareDiagnostics(
+            serverStatus: _controller.status,
+            serverPort: _controller.port,
+            serverLocalIp: _controller.localIp,
           ),
         ),
       ),
@@ -96,9 +117,14 @@ class _HomePageState extends State<HomePage> {
       final data = result.data;
       if (data == null) throw DeviceApiException('接口未返回设备信息');
       if (!mounted) return;
+      final headers = onlineTableHeaders(<Map<String, dynamic>>[data]);
       await Navigator.push<void>(
         context,
-        MaterialPageRoute(builder: (_) => DeviceDetailPage(data: data)),
+        MaterialPageRoute(
+          builder: (_) => DeviceDetailPage(
+            data: orderedOnlineDeviceData(data, headers),
+          ),
+        ),
       );
     } catch (error) {
       if (mounted) ToastUtil.showCenter(_errorText(error));
@@ -133,6 +159,7 @@ class _HomePageState extends State<HomePage> {
       onOnlineScan: _scanOnlineDevice,
       onOnlineList: _showOnlineList,
       onLocalPage: _showLocalPage,
+      onDiagnostics: _showDiagnostics,
       isOnlineLoading: _onlineLoading,
     );
   }

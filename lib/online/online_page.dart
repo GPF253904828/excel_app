@@ -31,7 +31,7 @@ const List<String> onlineDeviceHeaders = <String>[
   '计量有效期至',
 ];
 
-/// 按优先顺序重排接口返回字段，不补充或映射接口中不存在的列。
+/// 按业务优先级重排接口返回字段，不补充或映射不存在的列。
 List<String> onlineTableHeaders(List<Map<String, dynamic>> rows) {
   final returnedHeaders = <String>[];
   final seenHeaders = <String>{};
@@ -47,6 +47,19 @@ List<String> onlineTableHeaders(List<Map<String, dynamic>> rows) {
     for (final header in returnedHeaders)
       if (!onlineDeviceHeaders.contains(header)) header,
   ];
+}
+
+/// 按列表表头顺序重建详情数据，确保扫码详情与列表字段排列一致。
+Map<String, dynamic> orderedOnlineDeviceData(
+  Map<String, dynamic> data,
+  List<String> headers,
+) {
+  return <String, dynamic>{
+    for (final header in headers)
+      if (data.containsKey(header)) header: data[header],
+    for (final entry in data.entries)
+      if (!headers.contains(entry.key)) entry.key: entry.value,
+  };
 }
 
 /// 定义带分页参数的在线设备列表可替换回调。
@@ -398,10 +411,10 @@ class _OnlinePageState extends State<OnlinePage> {
     List<String> headers,
     List<String> row,
   ) async {
-    final data = <String, dynamic>{
+    final data = orderedOnlineDeviceData(<String, dynamic>{
       for (var index = 0; index < headers.length; index++)
         headers[index]: index < row.length ? row[index] : '',
-    };
+    }, headers);
     await Navigator.push<void>(
       context,
       MaterialPageRoute(builder: (_) => DeviceDetailPage(data: data)),

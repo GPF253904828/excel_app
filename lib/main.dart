@@ -1,5 +1,6 @@
 import 'package:excel_app/home_page.dart';
 import 'package:excel_app/pc_home_page.dart';
+import 'package:excel_app/utils/app_log.dart';
 import 'package:flutter/material.dart';
 import 'dart:io' show Platform;
 
@@ -7,7 +8,17 @@ bool get isMobile => Platform.isAndroid || Platform.isIOS;
 bool get isDesktop =>
     Platform.isWindows || Platform.isMacOS || Platform.isLinux;
 
-void main() {
+Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await AppLog.initialize();
+  FlutterError.onError = (details) {
+    AppLog.error(
+      details.exceptionAsString(),
+      details.exception,
+      details.stack,
+    );
+    FlutterError.presentError(details);
+  };
   runApp(const MyApp());
 }
 

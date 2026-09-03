@@ -41,6 +41,17 @@ void main() {
     );
   });
 
+  test('详情数据按在线列表表头顺序排列', () {
+    final data = <String, dynamic>{
+      '设备名称': '设备A',
+      '设备编号': 'P001',
+      '归属部门': '设备部',
+    };
+    final headers = onlineTableHeaders(<Map<String, dynamic>>[data]);
+
+    expect(orderedOnlineDeviceData(data, headers).keys.toList(), headers);
+  });
+
   testWidgets('进入在线页后加载首页，按钮和下拉都会重新加载首页', (tester) async {
     final requestedStarts = <int>[];
     await _pumpWidget(
