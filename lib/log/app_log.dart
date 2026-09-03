@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'package:flutter/foundation.dart';
 import 'package:logger/logger.dart';
 import 'package:path_provider/path_provider.dart';
 
@@ -52,6 +53,9 @@ class AppLog {
   static void info(String message) {
     _truncateIfNeeded();
     _logger?.i(message);
+    if (kDebugMode) {
+      print(message);
+    }
   }
 
   /// 写入错误和堆栈信息；日志尚未初始化时忽略。
@@ -75,6 +79,27 @@ class AppLog {
     final file = _file;
     if (file == null || !await file.exists()) return <int>[];
     return file.readAsBytes();
+  }
+
+  /// 获取当前日志文件的大小，返回易读的字符串，例如 "日志文件 2.35 MB"
+  static Future<String> get logFileSizeString async {
+    final file = _file;
+    if (file == null || !await file.exists()) {
+      return '日志文件 0 MB';
+    }
+    try {
+      final bytes = await file.length();
+      final mb = bytes / (1024 * 1024);
+      // 保留两位小数，去掉末尾多余的零（例如 2.30 -> 2.3）
+      String formatted = mb.toStringAsFixed(2);
+      // 可选：如果小数点后全是0，显示整数
+      if (formatted.endsWith('.00')) {
+        formatted = formatted.substring(0, formatted.length - 3);
+      }
+      return '日志文件 $formatted MB';
+    } catch (_) {
+      return '日志文件 0 MB';
+    }
   }
 }
 

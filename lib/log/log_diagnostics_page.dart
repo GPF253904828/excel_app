@@ -25,6 +25,7 @@ class LogDiagnosticsPage extends StatefulWidget {
 class _LogDiagnosticsPageState extends State<LogDiagnosticsPage> {
   String _content = '';
   String? _path;
+  String? _logFileSize;
   bool _loading = true;
   bool _uploading = false;
 
@@ -38,11 +39,13 @@ class _LogDiagnosticsPageState extends State<LogDiagnosticsPage> {
   Future<void> _load() async {
     final content = await AppLog.read();
     final path = await AppLog.filePath;
+    final logFileSize = await AppLog.logFileSizeString;
     if (!mounted) return;
     setState(() {
       _content = content;
       _path = path;
       _loading = false;
+      _logFileSize = logFileSize;
     });
   }
 
@@ -98,13 +101,14 @@ class _LogDiagnosticsPageState extends State<LogDiagnosticsPage> {
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   Text(_path ?? '日志尚未初始化'),
+                  Text(_logFileSize ?? '日志文件大小未知'),
                   const SizedBox(height: 12),
-                  Expanded(
-                    child: SelectableText(
-                      _content.isEmpty ? '暂无日志' : _content,
-                      key: const Key('diagnostic-log-content'),
-                    ),
-                  ),
+                  // Expanded(
+                  //   child: SelectableText(
+                  //     _content.isEmpty ? '暂无日志' : _content,
+                  //     key: const Key('diagnostic-log-content'),
+                  //   ),
+                  // ),
                   const SizedBox(height: 12),
                   FilledButton.icon(
                     onPressed: _uploading ? null : _upload,

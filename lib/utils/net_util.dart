@@ -18,16 +18,11 @@ class DeviceApi {
       'Context': {'argv': argv},
     };
     final encodedRequestBody = jsonEncode(requestBody);
-    print('[DeviceApi][config] webhook=$webhook token=$token');
     AppLog.info(
-        '[DeviceApi][config] webhook=$webhook token=${_maskToken(token)}');
-    print(
       '[DeviceApi][request] method=POST url=$webhook '
       'headers={AirScript-Token: $token, Content-Type: application/json} '
       'body=$encodedRequestBody',
     );
-    AppLog.info(
-        '[DeviceApi][request] method=POST url=$webhook body=$encodedRequestBody');
 
     late http.Response resp;
     try {
@@ -45,10 +40,6 @@ class DeviceApi {
       rethrow;
     }
     final responseBody = utf8.decode(resp.bodyBytes, allowMalformed: true);
-    print(
-      '[DeviceApi][response] status=${resp.statusCode} '
-      'headers=${resp.headers} body=$responseBody',
-    );
     AppLog.info(
         '[DeviceApi][response] status=${resp.statusCode} body=$responseBody');
 

@@ -51,7 +51,7 @@ class FileServer {
     try {
       final server = await HttpServer.bind(InternetAddress.anyIPv4, _port);
       _server = server;
-      debugPrint('文件服务已启动: http://${await getLocalIp()}:${server.port}');
+      AppLog.info('文件服务已启动: http://${await getLocalIp()}:${server.port}');
       _listen(server);
     } catch (error, stackTrace) {
       AppLog.error('[FileServer][init] failed port=$_port', error, stackTrace);

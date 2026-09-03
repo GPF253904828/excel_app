@@ -4,6 +4,7 @@ import 'dart:io';
 import 'dart:math' as math;
 
 import 'package:excel_app/device_detail_page.dart';
+import 'package:excel_app/log/app_log.dart';
 import 'package:excel_app/network_tools/xls_reader.dart';
 import 'package:excel_app/online/online_config_page.dart';
 import 'package:excel_app/online/online_config_store.dart';
@@ -142,14 +143,14 @@ class _OnlinePageState extends State<OnlinePage> {
 
   /// 读取活动配置并自动加载第一页在线列表。
   Future<void> _initialize() async {
-    print('[Online][initialize] start');
+    AppLog.info('[Online][initialize] start');
     try {
       await _loadConfig();
       await _loadFirstPage();
       await _showOnboardingGuideIfNeeded();
-      print('[Online][initialize] completed');
+      AppLog.info('[Online][initialize] completed');
     } catch (error) {
-      print('[Online][initialize][error] $error');
+      AppLog.error('[Online][initialize][error] $error');
       // 错误信息已由 _loadPage 写入状态供页面展示。
     }
   }
@@ -158,12 +159,12 @@ class _OnlinePageState extends State<OnlinePage> {
   Future<void> _loadConfig() async {
     final config = await widget.configStore.load();
     if (mounted) setState(() => _apiConfig = config);
-    print('[Online][config] loaded: ${config?.toJson()}');
+    AppLog.info('[Online][config] loaded: ${config?.toJson()}');
   }
 
   /// 打开配置列表，确认切换后清空当前数据等待用户手动刷新。
   Future<void> _openConfig() async {
-    print('[Online][config] open');
+    AppLog.info('[Online][config] open');
     final config = await Navigator.push<OnlineApiConfig>(
       context,
       MaterialPageRoute(
@@ -171,11 +172,11 @@ class _OnlinePageState extends State<OnlinePage> {
       ),
     );
     if (config == null) {
-      print('[Online][config] selection cancelled');
+      AppLog.info('[Online][config] selection cancelled');
       return;
     }
     if (!mounted) return;
-    print('[Online][config] selected: ${config.toJson()}');
+    AppLog.info('[Online][config] selected: ${config.toJson()}');
     setState(() {
       _apiConfig = config;
       _resetRows();
@@ -185,12 +186,12 @@ class _OnlinePageState extends State<OnlinePage> {
   /// 手动清空列表并重新加载第一页，将错误转为短提示。
   Future<void> _refresh() async {
     if (_loading || _loadingMore || _loadingAll) return;
-    print('[Online][refresh] start');
+    AppLog.info('[Online][refresh] start');
     try {
       await _loadFirstPage();
-      print('[Online][refresh] completed');
+      AppLog.info('[Online][refresh] completed');
     } catch (error) {
-      print('[Online][refresh][error] $error');
+      AppLog.error('[Online][refresh][error] $error');
       if (mounted) ToastUtil.showCenter(_errorText(error));
     }
   }
@@ -200,7 +201,7 @@ class _OnlinePageState extends State<OnlinePage> {
     final config = _apiConfig ?? await widget.configStore.load();
     if (config == null) throw DeviceApiException('请先选择接口配置');
     if (mounted && _apiConfig == null) setState(() => _apiConfig = config);
-    print('[Online][config] using: ${config.toJson()}');
+    AppLog.info('[Online][config] using: ${config.toJson()}');
     return config;
   }
 
@@ -210,7 +211,8 @@ class _OnlinePageState extends State<OnlinePage> {
     required int limit,
   }) async {
     if (widget.onList != null) {
-      print('[Online][list] using injected callback start=$start limit=$limit');
+      AppLog.info(
+          '[Online][list] using injected callback start=$start limit=$limit');
       return widget.onList!(start: start, limit: limit);
     }
     final config = await _requireConfig();
@@ -227,7 +229,7 @@ class _OnlinePageState extends State<OnlinePage> {
     String deviceNo,
     Map<String, dynamic> data,
   ) async {
-    print('[Online][modify] deviceNo=$deviceNo data=$data');
+    AppLog.info('[Online][modify] deviceNo=$deviceNo data=$data');
     if (widget.onModify != null) return widget.onModify!(deviceNo, data);
     final config = await _requireConfig();
     return DeviceApi.modifyDevice(
@@ -240,7 +242,7 @@ class _OnlinePageState extends State<OnlinePage> {
 
   /// 调用注入的新增回调或生产接口。
   Future<DeviceResult> _addApi(Map<String, dynamic> data) async {
-    print('[Online][add] data=$data');
+    AppLog.info('[Online][add] data=$data');
     if (widget.onAdd != null) return widget.onAdd!(data);
     final config = await _requireConfig();
     return DeviceApi.addDevice(data, webhook: config.url, token: config.token);
@@ -248,7 +250,7 @@ class _OnlinePageState extends State<OnlinePage> {
 
   /// 调用注入的删除回调或生产接口。
   Future<DeviceResult> _deleteApi(String deviceNo) async {
-    print('[Online][delete] deviceNo=$deviceNo');
+    AppLog.info('[Online][delete] deviceNo=$deviceNo');
     if (widget.onDelete != null) return widget.onDelete!(deviceNo);
     final config = await _requireConfig();
     return DeviceApi.deleteDevice(
