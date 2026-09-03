@@ -114,4 +114,63 @@ void main() {
 
     expect(find.text('Wi-Fi 网卡: wlan0\nIPv4: 10.200.16.15'), findsOneWidget);
   });
+
+  testWidgets('shares the QR archive through the configured callback',
+      (tester) async {
+    final controller = _TrackingHomePageController();
+    addTearDown(controller.dispose);
+    final archive = Uint8List.fromList(<int>[0x50, 0x4B]);
+    Uint8List? sharedArchive;
+    String? sharedFilename;
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: ExportPage(
+          controller: controller,
+          archive: archive,
+          filename: '二维码合计.zip',
+          onShare: (bytes, filename) async {
+            sharedArchive = bytes;
+            sharedFilename = filename;
+          },
+        ),
+      ),
+    );
+    await tester.pump();
+
+    expect(find.byKey(const Key('share-qr-archive')), findsOneWidget);
+
+    await tester.tap(find.byKey(const Key('share-qr-archive')));
+    await tester.pumpAndSettle();
+
+    expect(sharedArchive, same(archive));
+    expect(sharedFilename, '二维码合计.zip');
+    expect(find.text('已分享 二维码合计.zip'), findsOneWidget);
+  });
+
+  testWidgets('shows an error when sharing the QR archive fails',
+      (tester) async {
+    final controller = _TrackingHomePageController();
+    addTearDown(controller.dispose);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: ExportPage(
+          controller: controller,
+          archive: Uint8List.fromList(<int>[0x50, 0x4B]),
+          filename: '二维码合计.zip',
+          onShare: (_, __) async {
+            throw StateError('share unavailable');
+          },
+        ),
+      ),
+    );
+    await tester.pump();
+
+    await tester.tap(find.byKey(const Key('share-qr-archive')));
+    await tester.pumpAndSettle();
+
+    expect(find.textContaining('分享失败: Bad state: share unavailable'),
+        findsOneWidget);
+  });
 }

@@ -155,6 +155,7 @@ class SpreadsheetPage extends StatefulWidget {
   final SpreadsheetPageLoadCallback? onLoadMore;
   final bool hasMore;
   final int? totalCount;
+  final String? paginationStatus;
   final bool isLoading;
   final bool readOnly;
   final String? title;
@@ -175,6 +176,7 @@ class SpreadsheetPage extends StatefulWidget {
     this.onLoadMore,
     this.hasMore = false,
     this.totalCount,
+    this.paginationStatus,
     this.isLoading = false,
     this.readOnly = false,
     this.title,
@@ -576,12 +578,16 @@ class _SpreadsheetPageState extends State<SpreadsheetPage> {
     );
   }
 
-  /// 根据分页状态展示已加载数量、总数量或全部加载完成状态。
+  /// 根据分页状态展示计数和当前加载状态。
   String _dataCountText() {
     final total = widget.totalCount;
-    if (total == null) return '共 ${_rows.length} 条数据';
-    if (!widget.hasMore) return '已全部加载完成$total条数据';
-    return '已加载${_rows.length}/$total条数据';
+    final count = total == null
+        ? '共 ${_rows.length} 条数据'
+        : !widget.hasMore
+            ? '已全部加载完成$total条数据'
+            : '已加载${_rows.length}/$total条数据';
+    final status = widget.paginationStatus;
+    return status == null || status.isEmpty ? count : '$count，$status';
   }
 
   /// 在页面中央显示阻止交互的浮层加载提示。
@@ -591,10 +597,10 @@ class _SpreadsheetPageState extends State<SpreadsheetPage> {
           child: Center(
             child: Column(
               mainAxisSize: MainAxisSize.min,
-              children: const <Widget>[
-                CircularProgressIndicator(),
-                SizedBox(height: 12),
-                Text('Loading...'),
+              children: <Widget>[
+                const CircularProgressIndicator(),
+                const SizedBox(height: 12),
+                Text(widget.paginationStatus ?? 'Loading...'),
               ],
             ),
           ),

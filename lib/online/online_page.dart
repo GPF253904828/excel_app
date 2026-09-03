@@ -1,6 +1,7 @@
 // ignore_for_file: avoid_print
 
 import 'dart:io';
+import 'dart:math' as math;
 
 import 'package:excel_app/device_detail_page.dart';
 import 'package:excel_app/network_tools/xls_reader.dart';
@@ -11,6 +12,7 @@ import 'package:excel_app/spreadsheet_page.dart';
 import 'package:excel_app/utils/net_util.dart';
 import 'package:excel_app/utils/toast_util.dart';
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 /// 在线设备表格的优先显示顺序；实际显示字段以接口返回的表头为准。
 const List<String> onlineDeviceHeaders = <String>[
@@ -84,6 +86,7 @@ typedef DeviceDeleteCallback = Future<DeviceResult> Function(String deviceNo);
 
 /// 提供在线设备列表、远程行操作和二维码导出入口。
 class OnlinePage extends StatefulWidget {
+  final bool showOnboardingGuide;
   final DeviceListCallback? onList;
   final DeviceModifyCallback? onModify;
   final DeviceAddCallback? onAdd;
@@ -94,6 +97,7 @@ class OnlinePage extends StatefulWidget {
 
   const OnlinePage({
     super.key,
+    this.showOnboardingGuide = true,
     this.onList,
     this.onModify,
     this.onAdd,
@@ -109,6 +113,8 @@ class OnlinePage extends StatefulWidget {
 
 class _OnlinePageState extends State<OnlinePage> {
   static const int _pageSize = 100;
+  static const _guideSeenCountKey = 'online_page_guide_seen_count';
+  static const _guideMaxDisplays = 3;
 
   OnlineApiConfig? _apiConfig;
   XlsTable? _table;
@@ -116,9 +122,17 @@ class _OnlinePageState extends State<OnlinePage> {
   String? _error;
   bool _loading = true;
   bool _loadingMore = false;
+  bool _loadingAll = false;
   bool _hasMore = false;
   int _nextStart = 0;
+  int _loadedPageCount = 0;
   int? _total;
+  String? _paginationStatus = '正在加载第一页';
+  final _loadAllButtonKey = GlobalKey();
+  final _refreshButtonKey = GlobalKey();
+  final _configButtonKey = GlobalKey();
+  final _guideHostKey = GlobalKey<_OnlinePageOverlayHostState>();
+  bool _guideCheckScheduled = false;
 
   @override
   void initState() {
@@ -132,6 +146,7 @@ class _OnlinePageState extends State<OnlinePage> {
     try {
       await _loadConfig();
       await _loadFirstPage();
+      await _showOnboardingGuideIfNeeded();
       print('[Online][initialize] completed');
     } catch (error) {
       print('[Online][initialize][error] $error');
@@ -169,6 +184,7 @@ class _OnlinePageState extends State<OnlinePage> {
 
   /// 手动清空列表并重新加载第一页，将错误转为短提示。
   Future<void> _refresh() async {
+    if (_loading || _loadingMore || _loadingAll) return;
     print('[Online][refresh] start');
     try {
       await _loadFirstPage();
@@ -243,15 +259,96 @@ class _OnlinePageState extends State<OnlinePage> {
   }
 
   /// 清空当前数据并加载分页列表的首页。
-  Future<void> _loadFirstPage() => _loadPage(start: 0, replace: true);
+  Future<void> _loadFirstPage() async {
+    if (mounted) setState(() => _paginationStatus = '正在加载第一页');
+    try {
+      await _loadPage(start: 0, replace: true);
+    } finally {
+      if (mounted) setState(() => _paginationStatus = null);
+    }
+  }
+
+  /// 首次列表加载完成后，按本地次数决定是否显示操作引导。
+  Future<void> _showOnboardingGuideIfNeeded() async {
+    if (!widget.showOnboardingGuide ||
+        widget.readOnly ||
+        _guideCheckScheduled ||
+        !mounted) {
+      return;
+    }
+    _guideCheckScheduled = true;
+    try {
+      final preferences = await SharedPreferences.getInstance();
+      final seen = preferences.getInt(_guideSeenCountKey) ?? 0;
+      if (seen >= _guideMaxDisplays || !mounted) return;
+      await preferences.setInt(_guideSeenCountKey, seen + 1);
+      if (!mounted) return;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _presentOnboardingGuide();
+      });
+      WidgetsBinding.instance.scheduleFrame();
+    } catch (error) {
+      print('[Online][guide][error] $error');
+    }
+  }
+
+  /// 将按钮的 RenderBox 坐标转换为 Overlay 使用的全局矩形。
+  Rect? _globalRect(GlobalKey key) {
+    final renderObject = key.currentContext?.findRenderObject();
+    if (renderObject is! RenderBox || !renderObject.hasSize) return null;
+    return renderObject.localToGlobal(Offset.zero) & renderObject.size;
+  }
+
+  /// 打开指向顶部三个操作按钮的模态引导层。
+  void _presentOnboardingGuide() {
+    final targets = <Rect?>[
+      _globalRect(_loadAllButtonKey),
+      _globalRect(_refreshButtonKey),
+      _globalRect(_configButtonKey),
+    ];
+    if (targets.any((target) => target == null)) return;
+    _guideHostKey.currentState?.showGuide(targets.cast<Rect>());
+  }
 
   /// 在用户上拉到底部时追加下一页，不根据本页条数猜测是否结束。
   Future<void> _loadMore() async {
-    if (_loading || _loadingMore || !_hasMore) return;
+    if (_loading || _loadingMore || _loadingAll || !_hasMore) return;
+    if (mounted) {
+      setState(() => _paginationStatus = '正在加载第${_loadedPageCount + 1}页');
+    }
     try {
       await _loadPage(start: _nextStart, replace: false);
     } catch (error) {
       if (mounted) ToastUtil.showCenter(_errorText(error));
+    } finally {
+      if (mounted) setState(() => _paginationStatus = null);
+    }
+  }
+
+  /// 按接口返回的 nextStart 连续加载所有剩余分页。
+  Future<void> _loadAll() async {
+    if (_loading || _loadingMore || _loadingAll || !_hasMore) return;
+    setState(() => _loadingAll = true);
+    final requestedStarts = <int>{};
+    try {
+      while (_hasMore && mounted) {
+        final start = _nextStart;
+        if (!requestedStarts.add(start)) {
+          throw DeviceApiException('分页位置未推进');
+        }
+        final page = _loadedPageCount + 1;
+        setState(() => _paginationStatus = '正在加载第$page页');
+        await _loadPage(start: start, replace: false);
+      }
+      if (mounted) setState(() => _paginationStatus = null);
+    } catch (error) {
+      print('[Online][load-all][error] $error');
+      if (mounted) {
+        setState(() => _paginationStatus = '加载失败: ${_errorText(error)}');
+        ToastUtil.showCenter(_errorText(error));
+      }
+    } finally {
+      if (mounted) setState(() => _loadingAll = false);
     }
   }
 
@@ -282,6 +379,7 @@ class _OnlinePageState extends State<OnlinePage> {
           _hasMore = result.hasMore;
           _nextStart = result.nextStart ??
               ((result.start ?? start) + (result.limit ?? _pageSize));
+          _loadedPageCount = replace ? 1 : _loadedPageCount + 1;
           _total = result.total;
           _table = _tableFromRows(_rows);
         });
@@ -306,6 +404,7 @@ class _OnlinePageState extends State<OnlinePage> {
     _rows.clear();
     _hasMore = false;
     _nextStart = 0;
+    _loadedPageCount = 0;
     _total = null;
     _table = _tableFromRows(_rows);
   }
@@ -429,19 +528,38 @@ class _OnlinePageState extends State<OnlinePage> {
 
   /// 创建在线表格使用的统一工具栏操作。
   List<Widget> _tableActions() => <Widget>[
-        if (!widget.readOnly)
-          IconButton(
-            key: const Key('online-config'),
-            onPressed: _loading || _loadingMore ? null : _openConfig,
-            tooltip: '接口配置',
-            icon: const Icon(Icons.settings_outlined),
+        KeyedSubtree(
+          key: _loadAllButtonKey,
+          child: IconButton(
+            key: const Key('online-load-all'),
+            onPressed: _loading || _loadingMore || _loadingAll || !_hasMore
+                ? null
+                : _loadAll,
+            tooltip: '自动加载全部',
+            icon: const Icon(Icons.download_for_offline_outlined),
           ),
-        IconButton(
-          key: const Key('online-refresh'),
-          onPressed: _loading || _loadingMore ? null : _refresh,
-          tooltip: '刷新列表',
-          icon: const Icon(Icons.refresh),
         ),
+        KeyedSubtree(
+          key: _refreshButtonKey,
+          child: IconButton(
+            key: const Key('online-refresh'),
+            onPressed:
+                _loading || _loadingMore || _loadingAll ? null : _refresh,
+            tooltip: '刷新列表',
+            icon: const Icon(Icons.refresh),
+          ),
+        ),
+        if (!widget.readOnly)
+          KeyedSubtree(
+            key: _configButtonKey,
+            child: IconButton(
+              key: const Key('online-config'),
+              onPressed:
+                  _loading || _loadingMore || _loadingAll ? null : _openConfig,
+              tooltip: '接口配置',
+              icon: const Icon(Icons.settings_outlined),
+            ),
+          ),
       ];
 
   /// 构建列表加载过程中的状态页面。
@@ -457,7 +575,7 @@ class _OnlinePageState extends State<OnlinePage> {
                   children: const <Widget>[
                     CircularProgressIndicator(),
                     SizedBox(height: 12),
-                    Text('Loading...'),
+                    Text('正在加载第一页'),
                   ],
                 )
               : Padding(
@@ -474,21 +592,260 @@ class _OnlinePageState extends State<OnlinePage> {
     if (table == null || (_error != null && _rows.isEmpty)) {
       return _buildLoadingPage();
     }
-    return SpreadsheetPage(
-      file: File('online_devices.xls'),
-      table: table,
-      title: '在线设备',
-      appBarActions: _tableActions(),
-      onSaveRow: widget.readOnly ? null : _saveRemoteRow,
-      onDeleteRow: widget.readOnly ? null : _deleteRemoteRow,
-      onRefresh: _refresh,
-      onLoadMore: _loadMore,
-      hasMore: _hasMore,
-      totalCount: _total,
-      isLoading: _loading || _loadingMore,
-      readOnly: widget.readOnly,
-      onViewRow: widget.readOnly ? _openReadOnlyDetail : null,
-      qrExportPageBuilder: widget.qrExportPageBuilder,
+    return _OnlinePageOverlayHost(
+      key: _guideHostKey,
+      child: SpreadsheetPage(
+        file: File('online_devices.xls'),
+        table: table,
+        title: '在线设备',
+        appBarActions: _tableActions(),
+        onSaveRow: widget.readOnly ? null : _saveRemoteRow,
+        onDeleteRow: widget.readOnly ? null : _deleteRemoteRow,
+        onRefresh: _refresh,
+        onLoadMore: _loadMore,
+        hasMore: _hasMore,
+        totalCount: _total,
+        paginationStatus: _paginationStatus,
+        isLoading: _loading || _loadingMore || _loadingAll,
+        readOnly: widget.readOnly,
+        onViewRow: widget.readOnly ? _openReadOnlyDetail : null,
+        qrExportPageBuilder: widget.qrExportPageBuilder,
+      ),
     );
   }
+}
+
+/// 为在线设备页托管底层页面和可移除的模态引导层。
+class _OnlinePageOverlayHost extends StatefulWidget {
+  final Widget child;
+
+  const _OnlinePageOverlayHost({
+    super.key,
+    required this.child,
+  });
+
+  @override
+  State<_OnlinePageOverlayHost> createState() => _OnlinePageOverlayHostState();
+}
+
+class _OnlinePageOverlayHostState extends State<_OnlinePageOverlayHost> {
+  final _overlayKey = GlobalKey<OverlayState>();
+  late final OverlayEntry _contentEntry;
+  OverlayEntry? _guideEntry;
+
+  @override
+  void initState() {
+    super.initState();
+    _contentEntry = OverlayEntry(builder: (_) => widget.child);
+  }
+
+  @override
+  void didUpdateWidget(covariant _OnlinePageOverlayHost oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (!identical(oldWidget.child, widget.child)) {
+      _contentEntry.markNeedsBuild();
+    }
+  }
+
+  /// 在页面自己的 Overlay 上方显示操作引导。
+  void showGuide(List<Rect> targets) {
+    _guideEntry?.remove();
+    final entry = OverlayEntry(
+      builder: (_) => _OnlinePageGuide(
+        targets: targets,
+        onDismiss: dismissGuide,
+      ),
+    );
+    _guideEntry = entry;
+    _overlayKey.currentState?.insert(entry);
+  }
+
+  /// 移除当前操作引导层，恢复页面原有交互。
+  void dismissGuide() {
+    _guideEntry?.remove();
+    _guideEntry = null;
+  }
+
+  @override
+  void dispose() {
+    _guideEntry?.remove();
+    _contentEntry.remove();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) => Overlay(
+        key: _overlayKey,
+        initialEntries: <OverlayEntry>[_contentEntry],
+      );
+}
+
+/// 展示在线设备页三个顶部操作的单层模态引导。
+class _OnlinePageGuide extends StatelessWidget {
+  final List<Rect> targets;
+  final VoidCallback onDismiss;
+
+  const _OnlinePageGuide({
+    required this.targets,
+    required this.onDismiss,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox.expand(
+      child: Material(
+        key: const Key('online-page-guide'),
+        color: Colors.transparent,
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            const cardGap = 8.0;
+            final cardWidth = (constraints.maxWidth - 32 - cardGap * 2) / 3;
+            final cardTop = math.max(
+              96.0,
+              targets.map((target) => target.bottom).reduce(math.max) + 24,
+            );
+            final cardCenters = <Offset>[
+              for (var index = 0; index < 3; index++)
+                Offset(
+                    16 + cardWidth * (index + .5) + cardGap * index, cardTop),
+            ];
+            return Stack(
+              children: [
+                const Positioned.fill(
+                  child: ModalBarrier(
+                    dismissible: false,
+                    color: Colors.black54,
+                    semanticsLabel: '在线设备操作引导',
+                  ),
+                ),
+                Positioned.fill(
+                  child: CustomPaint(
+                    key: const Key('online-page-guide-arrows'),
+                    painter: _GuideArrowPainter(
+                      targets: targets,
+                      starts: cardCenters,
+                    ),
+                  ),
+                ),
+                Positioned(
+                  top: cardTop,
+                  left: 16,
+                  right: 16,
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      _card(
+                        title: '加载全部',
+                        description: '自动加载所有分页，不用再上拉加载更多。',
+                        width: cardWidth,
+                      ),
+                      const SizedBox(width: cardGap),
+                      _card(
+                        title: '刷新',
+                        description: '清空当前列表，重新加载第一页。',
+                        width: cardWidth,
+                      ),
+                      const SizedBox(width: cardGap),
+                      _card(
+                        title: '接口配置',
+                        description: '切换在线设备接口配置。',
+                        width: cardWidth,
+                      ),
+                    ],
+                  ),
+                ),
+                Positioned(
+                  left: 0,
+                  right: 0,
+                  bottom: 24,
+                  child: SafeArea(
+                    top: false,
+                    child: Center(
+                      child: FilledButton(
+                        key: const Key('online-page-guide-dismiss'),
+                        onPressed: onDismiss,
+                        child: const Text('知道了'),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            );
+          },
+        ),
+      ),
+    );
+  }
+
+  /// 构建单个操作说明卡片，统一三列的尺寸和文字样式。
+  Widget _card({
+    required String title,
+    required String description,
+    required double width,
+  }) =>
+      SizedBox(
+        width: width,
+        child: Material(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(10),
+          child: Padding(
+            padding: const EdgeInsets.all(10),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  title,
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(
+                    color: Colors.black87,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  description,
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(
+                    color: Colors.black87,
+                    fontSize: 12,
+                    height: 1.35,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+}
+
+/// 在说明卡片和目标按钮之间绘制带箭头的引导线。
+class _GuideArrowPainter extends CustomPainter {
+  final List<Rect> targets;
+  final List<Offset> starts;
+
+  const _GuideArrowPainter({
+    required this.targets,
+    required this.starts,
+  });
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final linePaint = Paint()
+      ..color = Colors.white
+      ..strokeWidth = 2.5
+      ..style = PaintingStyle.stroke;
+    for (var index = 0; index < targets.length; index++) {
+      final start = starts[index];
+      final end = Offset(targets[index].center.dx, targets[index].bottom + 4);
+      canvas.drawLine(start, end, linePaint);
+      final direction = (end - start) / (end - start).distance;
+      final side = Offset(-direction.dy, direction.dx);
+      final base = end - direction * 12;
+      canvas.drawLine(end, base + side * 5, linePaint);
+      canvas.drawLine(end, base - side * 5, linePaint);
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant _GuideArrowPainter oldDelegate) => true;
 }

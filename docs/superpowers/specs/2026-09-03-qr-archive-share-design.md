@@ -14,7 +14,7 @@
 
 ## 实现方案
 
-`ExportPage` 复用已有的 `archive` 字节和 `filename`，通过 `XFile.fromData` 构造 MIME 类型为 `application/zip` 的分享文件，并调用 `Share.shareXFiles`。不写入临时目录，避免额外的文件生命周期管理。
+`ExportPage` 复用已有的 `archive` 字节和 `filename`，通过 `XFile.fromData` 构造 MIME 类型为 `application/zip` 的分享文件，并调用 `Share.shareXFiles`。业务层不显式写入或清理临时目录；必要的临时文件由 `share_plus` 按平台实现管理。
 
 为保持页面测试可验证，`ExportPage` 提供可选的分享回调；未传入时使用 `share_plus` 的生产实现。分享按钮处理忙碌状态，防止重复打开分享面板。调用分享 API 时传入按钮上下文对应的 `sharePositionOrigin`，兼容 iPad 的分享面板定位要求。
 

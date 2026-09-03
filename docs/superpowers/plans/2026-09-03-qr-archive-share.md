@@ -4,7 +4,7 @@
 
 **Goal:** 在二维码导出页通过 `share_plus` 将现有的 `二维码合计.zip` 打开系统分享面板，分享到其他 App。
 
-**Architecture:** `ExportPage` 继续持有二维码 ZIP 的 `Uint8List` 和文件名，新增分享按钮与分享处理中状态。生产路径使用 `XFile.fromData` 和 `Share.shareXFiles`，测试路径通过可选回调注入，避免 Widget 测试依赖原生分享插件。
+**Architecture:** `ExportPage` 继续持有二维码 ZIP 的 `Uint8List` 和文件名，新增分享按钮与分享处理中状态。生产路径使用 `XFile.fromData` 和 `Share.shareXFiles`，业务层不显式管理临时文件；测试路径通过可选回调注入，避免 Widget 测试依赖原生分享插件。
 
 **Tech Stack:** Flutter, Dart, `share_plus` 6.3.4, `flutter_test`。
 

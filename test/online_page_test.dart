@@ -90,7 +90,7 @@ void main() {
     expect(requestedStarts, <int>[0, 0, 0]);
   });
 
-  testWidgets('刷新首页时显示 Loading', (tester) async {
+  testWidgets('刷新首页时显示第一页加载状态', (tester) async {
     final refreshResult = Completer<DeviceListResult>();
     var listCalls = 0;
     await _pumpWidget(
@@ -118,7 +118,7 @@ void main() {
 
     await tester.tap(find.byTooltip('刷新列表'));
     await tester.pump();
-    expect(find.text('Loading...'), findsOneWidget);
+    expect(find.text('正在加载第一页'), findsOneWidget);
 
     refreshResult.complete(
       _listResult(
@@ -136,7 +136,7 @@ void main() {
     expect(find.text('P002'), findsOneWidget);
   });
 
-  testWidgets('加载下一页时显示 Loading', (tester) async {
+  testWidgets('加载下一页时显示第二页加载状态', (tester) async {
     final nextPage = Completer<DeviceListResult>();
     addTearDown(() {
       if (!nextPage.isCompleted) {
@@ -175,7 +175,7 @@ void main() {
       const Offset(0, -6000),
     );
     await tester.pump();
-    expect(find.text('Loading...'), findsOneWidget);
+    expect(find.text('正在加载第2页'), findsOneWidget);
 
     nextPage.complete(
       _listResult(
@@ -366,6 +366,92 @@ void main() {
     );
   });
 
+  testWidgets('点击自动加载全部后按 nextStart 连续加载并显示状态', (tester) async {
+    final requestedStarts = <int>[];
+    final secondPage = Completer<DeviceListResult>();
+
+    await _pumpWidget(
+      tester,
+      _app(
+        onList: ({required start, required limit}) {
+          requestedStarts.add(start);
+          if (start == 0) {
+            return Future<DeviceListResult>.value(
+              _listResult(
+                _deviceRows('P', 50),
+                total: 120,
+                start: 0,
+                limit: limit,
+                hasMore: true,
+                nextStart: 50,
+              ),
+            );
+          }
+          return secondPage.future;
+        },
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(requestedStarts, <int>[0]);
+    expect(find.byTooltip('自动加载全部'), findsOneWidget);
+    expect(find.text('已加载50/120条数据'), findsOneWidget);
+
+    await tester.tap(find.byTooltip('自动加载全部'));
+    await tester.pump();
+
+    expect(requestedStarts, <int>[0, 50]);
+    expect(
+      find.text('已加载50/120条数据，正在加载第2页'),
+      findsOneWidget,
+    );
+
+    secondPage.complete(
+      _listResult(
+        _deviceRows('P', 70, offset: 50),
+        total: 120,
+        start: 50,
+        limit: 70,
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(requestedStarts, <int>[0, 50]);
+    expect(find.text('已全部加载完成120条数据'), findsOneWidget);
+  });
+
+  testWidgets('自动加载分页失败后停止并保留已加载数据', (tester) async {
+    final requestedStarts = <int>[];
+
+    await _pumpWidget(
+      tester,
+      _app(
+        onList: ({required start, required limit}) async {
+          requestedStarts.add(start);
+          if (start == 0) {
+            return _listResult(
+              _deviceRows('P', 50),
+              total: 120,
+              start: 0,
+              limit: limit,
+              hasMore: true,
+              nextStart: 50,
+            );
+          }
+          throw DeviceApiException('第二页加载失败');
+        },
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byTooltip('自动加载全部'));
+    await tester.pumpAndSettle();
+
+    expect(requestedStarts, <int>[0, 50]);
+    expect(find.text('P000'), findsOneWidget);
+    expect(find.textContaining('加载失败: 第二页加载失败'), findsOneWidget);
+  });
+
   testWidgets('修改成功后更新本地行但不重新加载线上列表', (tester) async {
     var listCalls = 0;
     String? modifiedNo;
@@ -523,6 +609,102 @@ void main() {
     expect(find.byTooltip('刷新列表'), findsOneWidget);
     expect(find.byTooltip('生成二维码'), findsOneWidget);
   });
+
+  testWidgets('前三次进入显示三个顶部按钮的操作引导', (tester) async {
+    Future<DeviceListResult> list({required int start, required int limit}) =>
+        Future<DeviceListResult>.value(
+          _listResult(
+            <Map<String, dynamic>>[
+              _deviceRow(deviceNo: 'P001', name: '设备A'),
+            ],
+            total: 1,
+            start: start,
+            limit: limit,
+          ),
+        );
+
+    for (var entry = 0; entry < 3; entry++) {
+      await tester.pumpWidget(
+        _app(
+          onList: list,
+          showOnboardingGuide: true,
+          pageKey: UniqueKey(),
+        ),
+      );
+      await tester.pumpAndSettle();
+      await tester.pump();
+
+      final widgets = tester.allWidgets.toList();
+      final textData =
+          widgets.whereType<Text>().map((widget) => widget.data).toList();
+      expect(textData.where((data) => data == '加载全部').length, 1);
+      expect(
+        textData.where((data) => data == '自动加载所有分页，不用再上拉加载更多。').length,
+        1,
+      );
+      expect(textData.where((data) => data == '刷新').length, 1);
+      expect(
+        textData.where((data) => data == '清空当前列表，重新加载第一页。').length,
+        1,
+      );
+      expect(textData.where((data) => data == '接口配置').length, 1);
+      expect(
+        textData.where((data) => data == '切换在线设备接口配置。').length,
+        1,
+      );
+      expect(widgets.whereType<CustomPaint>(), isNotEmpty);
+
+      await _tapGuideDismissButton(tester);
+      await tester.pumpAndSettle();
+      expect(
+        tester.allWidgets.toList().whereType<Text>().any(
+              (widget) => widget.data == '知道了',
+            ),
+        isFalse,
+      );
+    }
+
+    await tester.pumpWidget(
+      _app(
+        onList: list,
+        showOnboardingGuide: true,
+        pageKey: UniqueKey(),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(
+      tester.allWidgets.toList().whereType<Text>().any(
+            (widget) => widget.data == '知道了',
+          ),
+      isFalse,
+    );
+  });
+
+  testWidgets('只读在线设备页不显示三按钮操作引导', (tester) async {
+    await _pumpWidget(
+      tester,
+      _app(
+        readOnly: true,
+        showOnboardingGuide: true,
+        onList: ({required start, required limit}) async => _listResult(
+          <Map<String, dynamic>>[
+            _deviceRow(deviceNo: 'P001', name: '设备A'),
+          ],
+          total: 1,
+          start: start,
+          limit: limit,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(
+      tester.allWidgets.toList().whereType<Text>().any(
+            (widget) => widget.data == '知道了',
+          ),
+      isFalse,
+    );
+  });
 }
 
 /// 验证在线接口配置列表的迁移、内置保护和选择流程。
@@ -657,9 +839,12 @@ Widget _app({
   OnlineConfigStore configStore = const OnlineConfigStore(),
   bool readOnly = false,
   QrExportPageBuilder? qrExportPageBuilder,
+  bool showOnboardingGuide = false,
+  Key? pageKey,
 }) {
   return MaterialApp(
     home: OnlinePage(
+      key: pageKey,
       onList: onList,
       onModify: onModify,
       onAdd: onAdd,
@@ -667,8 +852,27 @@ Widget _app({
       configStore: configStore,
       readOnly: readOnly,
       qrExportPageBuilder: qrExportPageBuilder,
+      showOnboardingGuide: showOnboardingGuide,
     ),
   );
+}
+
+/// 通过 OverlayEntry 中“知道了”按钮的 RenderBox 坐标触发点击。
+Future<void> _tapGuideDismissButton(WidgetTester tester) async {
+  final element = tester.allElements.firstWhere((element) {
+    final widget = element.widget;
+    return widget is FilledButton &&
+        widget.child is Text &&
+        (widget.child! as Text).data == '知道了';
+  });
+  final renderObject = element.renderObject;
+  if (renderObject is! RenderBox) {
+    throw StateError('引导关闭按钮没有可点击的 RenderBox');
+  }
+  final center = renderObject.localToGlobal(
+    renderObject.size.center(Offset.zero),
+  );
+  await tester.tapAt(center);
 }
 
 /// 构造在线列表的一条设备记录。
