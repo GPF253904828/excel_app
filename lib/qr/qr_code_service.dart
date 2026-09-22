@@ -124,10 +124,15 @@ class QrCodeService {
   /// 使用 qr_flutter 绘制高分辨率紧凑双栏二维码，并合成设备信息。
   Future<Uint8List> _renderPng(QrDevice device) async {
     const imageScale = 3.0;
-    const width = 1920.0;
-    const height = 738.0;
-    const qrOffset = Offset(30, 31);
-    const qrSize = 172.0;
+    const width = 2700.0;
+    const height = 900.0;
+    const qrSize = 260.0;
+    const qrOffset = Offset(12, (300 - qrSize) / 2);
+    const infoLeft = 290.0;
+    const infoTop = 18.0;
+    const infoRowHeight = 66.0;
+    const infoWidth = 580.0;
+
     final brandMark = await _loadBrandMark();
     final recorder = ui.PictureRecorder();
     final canvas = Canvas(recorder);
@@ -143,11 +148,7 @@ class QrCodeService {
     ).paint(canvas, const Size(qrSize, qrSize));
     canvas.restore();
     _paintBrandMark(canvas, brandMark, qrOffset, qrSize);
-    // 右侧四行信息：行高与上下留白对称，字号在可用空间内取最大。
-    const infoLeft = 220.0;
-    const infoTop = 6.0;
-    const infoRowHeight = 55.0;
-    const infoWidth = 390.0;
+
     _paintInfoRow(
       canvas,
       '设备编号:',
@@ -168,13 +169,19 @@ class QrCodeService {
       const Rect.fromLTWH(
           infoLeft, infoTop + infoRowHeight * 2, infoWidth, infoRowHeight),
     );
+
     _paintFittedText(
       canvas,
-      '其他信息请扫码查看2',
+      '其他信息请扫码查看',
       const Rect.fromLTWH(
-          infoLeft, infoTop + infoRowHeight * 3, infoWidth, infoRowHeight),
-      maxFontSize: 20,
-      color: Colors.black87,
+        infoLeft,
+        infoTop + infoRowHeight * 3,
+        infoWidth,
+        infoRowHeight,
+      ),
+      maxFontSize: 30,
+      minFontSize: 25,
+      color: const Color(0xFF777777),
       fontWeight: FontWeight.w500,
     );
     final picture = recorder.endRecording();
@@ -212,11 +219,16 @@ class QrCodeService {
       qrOffset.dx + qrSize / 2,
       qrOffset.dy + qrSize / 2,
     );
-    // 留白约占二维码面积 16.7%，在 H 级纠错范围内仍可正常识别。
+
+    // 中心白色区域
     canvas.drawRRect(
       RRect.fromRectAndRadius(
-        Rect.fromCenter(center: center, width: 112, height: 44),
-        const Radius.circular(6),
+        Rect.fromCenter(
+          center: center,
+          width: qrSize * 0.62,
+          height: qrSize * 0.25,
+        ),
+        const Radius.circular(7),
       ),
       Paint()..color = Colors.white,
     );
@@ -227,7 +239,10 @@ class QrCodeService {
       _brandMarkCrop.right * brandMark.width,
       _brandMarkCrop.bottom * brandMark.height,
     );
-    const markWidth = 100.0;
+
+    // Logo 随二维码同比例放大
+    final markWidth = qrSize * 0.55;
+
     canvas.drawImageRect(
       brandMark,
       source,
@@ -240,34 +255,45 @@ class QrCodeService {
     );
   }
 
-  /// 在右侧单行内绘制标签与值，并绘制行分隔线。
-  void _paintInfoRow(
-    Canvas canvas,
-    String label,
-    String value,
-    Rect rect, {
-    double labelWidth = 96.0,
-  }) {
-    // 标签列固定宽度，取值列占据剩余空间，两列在同一行内垂直居中。
+  /// 在右侧单行内绘制标签与值，并绘制轻量分隔线。
+  void _paintInfoRow(Canvas canvas, String label, String value, Rect rect) {
+    const double labelWidth = 138.0;
     _paintFittedText(
       canvas,
       label,
-      Rect.fromLTWH(rect.left, rect.top, labelWidth, rect.height),
-      maxFontSize: 32,
-      color: Colors.black87,
+      Rect.fromLTWH(
+        rect.left,
+        rect.top,
+        labelWidth,
+        rect.height,
+      ),
+      maxFontSize: 34,
+      minFontSize: 30,
+      color: const Color(0xFF666666),
       fontWeight: FontWeight.w500,
     );
+
     _paintFittedText(
       canvas,
       value,
-      Rect.fromLTWH(rect.left + labelWidth, rect.top, rect.width - labelWidth,
-          rect.height),
-      maxFontSize: 32,
+      Rect.fromLTWH(
+        rect.left + labelWidth,
+        rect.top,
+        rect.width - labelWidth,
+        rect.height,
+      ),
+      maxFontSize: 40,
+      minFontSize: 27,
+      color: const Color(0xFF181818),
+      fontWeight: FontWeight.w600,
     );
+
     canvas.drawLine(
-      Offset(rect.left, rect.bottom - 6),
-      Offset(rect.right, rect.bottom - 6),
-      Paint()..color = Colors.black12,
+      Offset(rect.left, rect.bottom - 5),
+      Offset(rect.right, rect.bottom - 5),
+      Paint()
+        ..color = const Color(0x18000000)
+        ..strokeWidth = 1.2,
     );
   }
 
@@ -283,6 +309,7 @@ class QrCodeService {
   }) {
     var fontSize = maxFontSize;
     late TextPainter painter;
+
     while (true) {
       painter = TextPainter(
         text: TextSpan(
@@ -291,19 +318,27 @@ class QrCodeService {
             color: color,
             fontSize: fontSize,
             fontWeight: fontWeight,
-            height: 1.2,
+            height: 1.0,
+            letterSpacing: 0.2,
           ),
         ),
         textDirection: TextDirection.ltr,
         maxLines: 1,
-        ellipsis: '...',
       )..layout(maxWidth: rect.width);
-      if (fontSize <= minFontSize || !painter.didExceedMaxLines) break;
+
+      if (fontSize <= minFontSize || !painter.didExceedMaxLines) {
+        break;
+      }
+
       fontSize -= 1;
     }
+
     painter.paint(
       canvas,
-      Offset(rect.left, rect.top + (rect.height - painter.height) / 2),
+      Offset(
+        rect.left,
+        rect.top + (rect.height - painter.height) / 2,
+      ),
     );
   }
 }

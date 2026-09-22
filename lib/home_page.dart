@@ -6,6 +6,7 @@ import 'package:excel_app/log/log_diagnostics_page.dart';
 import 'package:excel_app/local_page.dart';
 import 'package:excel_app/online/online_config_store.dart';
 import 'package:excel_app/online/online_page.dart';
+import 'package:excel_app/qr/qr_test_page.dart';
 import 'package:excel_app/qr/scanner_page.dart';
 import 'package:excel_app/utils/net_util.dart';
 import 'package:excel_app/log/diagnostics_service.dart';
@@ -80,6 +81,16 @@ class _HomePageState extends State<HomePage> {
             serverLocalIp: _controller.localIp,
           ),
         ),
+      ),
+    );
+  }
+
+  /// 打开测试页面，用于测试扫码后的实时数据流。
+  void _showTestPage() {
+    Navigator.push<void>(
+      context,
+      MaterialPageRoute(
+        builder: (_) => const QrTestPage(),
       ),
     );
   }
@@ -161,6 +172,7 @@ class _HomePageState extends State<HomePage> {
       onLocalPage: _showLocalPage,
       onDiagnostics: _showDiagnostics,
       isOnlineLoading: _onlineLoading,
+      onTestPage: _showTestPage,
     );
   }
 }

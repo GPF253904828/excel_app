@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 /// 首页大厅的纯展示层，只负责转发在线和本地入口操作。
@@ -7,6 +8,7 @@ class HomePageView extends StatelessWidget {
   final VoidCallback onLocalPage;
   final bool isOnlineLoading;
   final VoidCallback? onDiagnostics;
+  final VoidCallback? onTestPage;
 
   const HomePageView({
     super.key,
@@ -15,6 +17,7 @@ class HomePageView extends StatelessWidget {
     required this.onLocalPage,
     this.isOnlineLoading = false,
     this.onDiagnostics,
+    this.onTestPage,
   });
 
   /// 构建大厅布局和两个业务入口。
@@ -41,6 +44,7 @@ class HomePageView extends StatelessWidget {
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
+                    const Spacer(),
                     SizedBox(
                       width: 240,
                       height: 64,
@@ -70,6 +74,17 @@ class HomePageView extends StatelessWidget {
                     //     label: const Text('本地'),
                     //   ),
                     // ),
+                    const Spacer(),
+                    if (kDebugMode)
+                      SizedBox(
+                        width: 240,
+                        height: 34,
+                        child: OutlinedButton.icon(
+                          onPressed: onTestPage,
+                          icon: const Icon(Icons.deblur),
+                          label: const Text('测试'),
+                        ),
+                      ),
                   ],
                 ),
               ),
