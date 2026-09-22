@@ -220,15 +220,18 @@ class QrCodeService {
       qrOffset.dy + qrSize / 2,
     );
 
-    // 中心白色区域
+    // Logo 白底区域
+    final logoWidth = qrSize * 0.20;
+    final logoHeight = qrSize * 0.09;
+
     canvas.drawRRect(
       RRect.fromRectAndRadius(
         Rect.fromCenter(
           center: center,
-          width: qrSize * 0.62,
-          height: qrSize * 0.25,
+          width: logoWidth,
+          height: logoHeight,
         ),
-        const Radius.circular(7),
+        const Radius.circular(4),
       ),
       Paint()..color = Colors.white,
     );
@@ -240,8 +243,8 @@ class QrCodeService {
       _brandMarkCrop.bottom * brandMark.height,
     );
 
-    // Logo 随二维码同比例放大
-    final markWidth = qrSize * 0.55;
+    // Logo 实际内容
+    final markWidth = qrSize * 0.22;
 
     canvas.drawImageRect(
       brandMark,
