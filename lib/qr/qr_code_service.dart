@@ -73,6 +73,14 @@ class QrCodeService {
   final Directory outputDirectory;
   static Future<ui.Image>? _brandMarkFuture;
 
+  /// 官方 Logo 原图中“AccBio”字标的裁剪范围（比例，去除底部文字与四周留白）。
+  static const Rect _brandMarkCrop = Rect.fromLTRB(
+    345 / 3303,
+    39 / 1461,
+    2900 / 3303,
+    875 / 1461,
+  );
+
   const QrCodeService(this.outputDirectory);
 
   /// 清理旧图片并为设备记录生成新的 PNG 文件。
@@ -118,14 +126,13 @@ class QrCodeService {
     const imageScale = 3.0;
     const width = 1920.0;
     const height = 738.0;
-    const qrOffset = Offset(30, 24);
+    const qrOffset = Offset(30, 31);
     const qrSize = 172.0;
     final brandMark = await _loadBrandMark();
     final recorder = ui.PictureRecorder();
     final canvas = Canvas(recorder);
     canvas.drawColor(Colors.white, BlendMode.src);
     canvas.scale(imageScale);
-
     canvas.save();
     canvas.translate(qrOffset.dx, qrOffset.dy);
     QrPainter(
@@ -136,32 +143,39 @@ class QrCodeService {
     ).paint(canvas, const Size(qrSize, qrSize));
     canvas.restore();
     _paintBrandMark(canvas, brandMark, qrOffset, qrSize);
-    var offsetY = 2.0;
-    _paintDeviceInfo(
+    // 右侧四行信息：行高与上下留白对称，字号在可用空间内取最大。
+    const infoLeft = 220.0;
+    const infoTop = 6.0;
+    const infoRowHeight = 55.0;
+    const infoWidth = 390.0;
+    _paintInfoRow(
       canvas,
-      '设备编号',
+      '设备编号:',
       device.deviceNumber,
-      Offset(250, 34 - offsetY),
+      const Rect.fromLTWH(infoLeft, infoTop, infoWidth, infoRowHeight),
     );
-    _paintDeviceInfo(
-        canvas, '设备名称', device.deviceName, Offset(250, 96 - offsetY));
-    _paintDeviceInfo(
+    _paintInfoRow(
       canvas,
-      '设备型号',
+      '设备名称:',
+      device.deviceName,
+      const Rect.fromLTWH(
+          infoLeft, infoTop + infoRowHeight, infoWidth, infoRowHeight),
+    );
+    _paintInfoRow(
+      canvas,
+      '设备型号:',
       device.deviceModel.isEmpty ? '未填写' : device.deviceModel,
-      Offset(250, 158 - offsetY),
+      const Rect.fromLTWH(
+          infoLeft, infoTop + infoRowHeight * 2, infoWidth, infoRowHeight),
     );
-    _paintText(
+    _paintFittedText(
       canvas,
-      '其他信息请扫码查看',
-      const Offset(48, 207),
-      style: const TextStyle(
-        color: Colors.black54,
-        fontSize: 15,
-        height: 1.2,
-      ),
-      maxWidth: qrSize,
-      textAlign: TextAlign.center,
+      '其他信息请扫码查看2',
+      const Rect.fromLTWH(
+          infoLeft, infoTop + infoRowHeight * 3, infoWidth, infoRowHeight),
+      maxFontSize: 20,
+      color: Colors.black87,
+      fontWeight: FontWeight.w500,
     );
     final picture = recorder.endRecording();
     final image = await picture.toImage(width.toInt(), height.toInt());
@@ -175,19 +189,19 @@ class QrCodeService {
   /// 缓存并解码二维码中心使用的官方品牌标识。
   Future<ui.Image> _loadBrandMark() => _brandMarkFuture ??= _decodeBrandMark();
 
-  /// 将官方完整 Logo 解码为匹配高分辨率输出的中心位图。
+  /// 将官方 Logo 解码为高分辨率位图，供中心字标裁剪使用。
   Future<ui.Image> _decodeBrandMark() async {
     final data = await rootBundle.load('assets/branding/acbio_logo.png');
     final codec = await ui.instantiateImageCodec(
       data.buffer.asUint8List(),
-      targetHeight: 168,
+      targetHeight: 480,
     );
     final frame = await codec.getNextFrame();
     codec.dispose();
     return frame.image;
   }
 
-  /// 在二维码中心绘制白色留白和官方完整 Logo，保持二维码可识别性。
+  /// 在二维码中心绘制白色留白与放大后的品牌字标，兼顾可读性与识别率。
   void _paintBrandMark(
     Canvas canvas,
     ui.Image brandMark,
@@ -198,90 +212,98 @@ class QrCodeService {
       qrOffset.dx + qrSize / 2,
       qrOffset.dy + qrSize / 2,
     );
-    final cover = RRect.fromRectAndRadius(
-      Rect.fromCenter(center: center, width: 76, height: 42),
-      const Radius.circular(5),
+    // 留白约占二维码面积 16.7%，在 H 级纠错范围内仍可正常识别。
+    canvas.drawRRect(
+      RRect.fromRectAndRadius(
+        Rect.fromCenter(center: center, width: 112, height: 44),
+        const Radius.circular(6),
+      ),
+      Paint()..color = Colors.white,
     );
-    canvas.drawRRect(cover, Paint()..color = Colors.white);
 
-    const markHeight = 28.0;
-    final markWidth = markHeight * brandMark.width / brandMark.height;
-    final destination = Rect.fromCenter(
-      center: center,
-      width: markWidth,
-      height: markHeight,
+    final source = Rect.fromLTRB(
+      _brandMarkCrop.left * brandMark.width,
+      _brandMarkCrop.top * brandMark.height,
+      _brandMarkCrop.right * brandMark.width,
+      _brandMarkCrop.bottom * brandMark.height,
     );
+    const markWidth = 100.0;
     canvas.drawImageRect(
       brandMark,
-      Rect.fromLTWH(
-          0, 0, brandMark.width.toDouble(), brandMark.height.toDouble()),
-      destination,
+      source,
+      Rect.fromCenter(
+        center: center,
+        width: markWidth,
+        height: markWidth * source.height / source.width,
+      ),
       Paint()..filterQuality = FilterQuality.high,
     );
   }
 
-  /// 绘制右侧设备字段及其分隔线，保持三项信息的统一层级。
-  void _paintDeviceInfo(
+  /// 在右侧单行内绘制标签与值，并绘制行分隔线。
+  void _paintInfoRow(
     Canvas canvas,
     String label,
     String value,
-    Offset offset,
-  ) {
-    const maxWidth = 360.0;
-    _paintText(
+    Rect rect, {
+    double labelWidth = 96.0,
+  }) {
+    // 标签列固定宽度，取值列占据剩余空间，两列在同一行内垂直居中。
+    _paintFittedText(
       canvas,
       label,
-      offset,
-      style: const TextStyle(
-        color: Colors.black54,
-        fontSize: 15,
-        height: 1.2,
-      ),
-      maxWidth: maxWidth,
+      Rect.fromLTWH(rect.left, rect.top, labelWidth, rect.height),
+      maxFontSize: 32,
+      color: Colors.black87,
+      fontWeight: FontWeight.w500,
     );
-    _paintText(
+    _paintFittedText(
       canvas,
       value,
-      Offset(offset.dx, offset.dy + 22),
-      style: const TextStyle(
-        color: Colors.black,
-        fontSize: 20,
-        fontWeight: FontWeight.w600,
-        height: 1.2,
-      ),
-      maxWidth: maxWidth,
+      Rect.fromLTWH(rect.left + labelWidth, rect.top, rect.width - labelWidth,
+          rect.height),
+      maxFontSize: 32,
     );
     canvas.drawLine(
-      Offset(offset.dx, offset.dy + 52),
-      Offset(offset.dx + maxWidth, offset.dy + 52),
+      Offset(rect.left, rect.bottom - 6),
+      Offset(rect.right, rect.bottom - 6),
       Paint()..color = Colors.black12,
     );
   }
 
-  /// 将标签文本绘制到固定区域内，避免长内容挤出画布。
-  void _paintText(
+  /// 在给定区域内绘制单行文本，字号从最大值逐级缩小直到内容不溢出。
+  void _paintFittedText(
     Canvas canvas,
     String text,
-    Offset offset, {
-    TextStyle style = const TextStyle(
-      color: Colors.black,
-      fontSize: 24,
-      height: 1.2,
-    ),
-    double maxWidth = 365,
-    TextAlign textAlign = TextAlign.left,
-    int maxLines = 1,
+    Rect rect, {
+    required double maxFontSize,
+    Color color = Colors.black,
+    FontWeight fontWeight = FontWeight.w600,
+    double minFontSize = 16,
   }) {
-    final painter = TextPainter(
-      text: TextSpan(
-        text: text,
-        style: style,
-      ),
-      textDirection: TextDirection.ltr,
-      textAlign: textAlign,
-      maxLines: maxLines,
-      ellipsis: '...',
-    )..layout(maxWidth: maxWidth);
-    painter.paint(canvas, offset);
+    var fontSize = maxFontSize;
+    late TextPainter painter;
+    while (true) {
+      painter = TextPainter(
+        text: TextSpan(
+          text: text,
+          style: TextStyle(
+            color: color,
+            fontSize: fontSize,
+            fontWeight: fontWeight,
+            height: 1.2,
+          ),
+        ),
+        textDirection: TextDirection.ltr,
+        maxLines: 1,
+        ellipsis: '...',
+      )..layout(maxWidth: rect.width);
+      if (fontSize <= minFontSize || !painter.didExceedMaxLines) break;
+      fontSize -= 1;
+    }
+    painter.paint(
+      canvas,
+      Offset(rect.left, rect.top + (rect.height - painter.height) / 2),
+    );
   }
 }
