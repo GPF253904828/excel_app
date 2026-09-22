@@ -72,15 +72,6 @@ String qrFileName(QrDevice device, Set<String> usedNames) {
 class QrCodeService {
   final Directory outputDirectory;
   static Future<ui.Image>? _brandMarkFuture;
-
-  /// 官方 Logo 原图中“AccBio”字标的裁剪范围（比例，去除底部文字与四周留白）。
-  static const Rect _brandMarkCrop = Rect.fromLTRB(
-    345 / 3303,
-    39 / 1461,
-    2900 / 3303,
-    875 / 1461,
-  );
-
   const QrCodeService(this.outputDirectory);
 
   /// 清理旧图片并为设备记录生成新的 PNG 文件。
@@ -181,8 +172,8 @@ class QrCodeService {
       ),
       maxFontSize: 30,
       minFontSize: 25,
-      color: const Color(0xFF777777),
-      fontWeight: FontWeight.w500,
+      color: const Color(0xFF181818),
+      fontWeight: FontWeight.w600,
     );
     final picture = recorder.endRecording();
     final image = await picture.toImage(width.toInt(), height.toInt());
@@ -198,10 +189,9 @@ class QrCodeService {
 
   /// 将官方 Logo 解码为高分辨率位图，供中心字标裁剪使用。
   Future<ui.Image> _decodeBrandMark() async {
-    final data = await rootBundle.load('assets/branding/acbio_logo.png');
+    final data = await rootBundle.load('assets/branding/acbio_qr_logo.png');
     final codec = await ui.instantiateImageCodec(
       data.buffer.asUint8List(),
-      targetHeight: 480,
     );
     final frame = await codec.getNextFrame();
     codec.dispose();
@@ -220,9 +210,9 @@ class QrCodeService {
       qrOffset.dy + qrSize / 2,
     );
 
-    // Logo 白底区域
-    final logoWidth = qrSize * 0.20;
-    final logoHeight = qrSize * 0.09;
+    // Logo 白色遮挡区域
+    final logoWidth = qrSize * 0.29;
+    final logoHeight = qrSize * 0.12;
 
     canvas.drawRRect(
       RRect.fromRectAndRadius(
@@ -231,20 +221,23 @@ class QrCodeService {
           width: logoWidth,
           height: logoHeight,
         ),
-        const Radius.circular(4),
+        const Radius.circular(0),
       ),
       Paint()..color = Colors.white,
     );
 
-    final source = Rect.fromLTRB(
-      _brandMarkCrop.left * brandMark.width,
-      _brandMarkCrop.top * brandMark.height,
-      _brandMarkCrop.right * brandMark.width,
-      _brandMarkCrop.bottom * brandMark.height,
+    // 直接使用原图，不裁剪、不偏移
+    final source = Rect.fromLTWH(
+      0,
+      0,
+      brandMark.width.toDouble(),
+      brandMark.height.toDouble(),
     );
 
-    // Logo 实际内容
+    // Logo 实际显示宽度
     final markWidth = qrSize * 0.22;
+
+    final markHeight = markWidth * brandMark.height / brandMark.width;
 
     canvas.drawImageRect(
       brandMark,
@@ -252,7 +245,7 @@ class QrCodeService {
       Rect.fromCenter(
         center: center,
         width: markWidth,
-        height: markWidth * source.height / source.width,
+        height: markHeight,
       ),
       Paint()..filterQuality = FilterQuality.high,
     );
@@ -272,8 +265,8 @@ class QrCodeService {
       ),
       maxFontSize: 34,
       minFontSize: 30,
-      color: const Color(0xFF666666),
-      fontWeight: FontWeight.w500,
+      color: const Color(0xFF181818),
+      fontWeight: FontWeight.w600,
     );
 
     _paintFittedText(
